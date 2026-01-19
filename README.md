@@ -7,7 +7,6 @@ A curated catalog of Agent Skills plus supporting docs, scripts, and assets.
 - `skills/` — all skills (SKILL.md + resources)
 - `skills/3rd-party/` — vendored third‑party skills
 - `skills/skill-creator/` — canonical guide + tooling for creating skills
-- `dist/` — packaged `.skill` artifacts (when generated)
 - `AGENTS.md` — local agent operating rules for this repo
 
 ## Create or update a skill
@@ -27,7 +26,7 @@ Validate:
 Package (optional):
 
 ```
-./skills/skill-creator/scripts/package_skill.py ./skills/<skill-name> ./dist
+./skills/skill-creator/scripts/package_skill.py ./skills/<skill-name> ./output
 ```
 
 ## Conventions
