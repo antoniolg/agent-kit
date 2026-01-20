@@ -28,6 +28,8 @@ SCOPES = [
 DEFAULT_CONFIG_PATH = os.path.expanduser("~/.config/youtube-publish/config.yaml")
 DEFAULT_TOKEN_PATH = os.path.expanduser("~/.config/youtube-publish/token.json")
 DEFAULT_PROMO_LINE = "Domina la IA para el desarrollo de Software 👉 https://devexpert.io/cursos/expert/ai"
+YOUTUBE_WATCH_URL = "https://www.youtube.com/watch?v="
+YOUTUBE_SHORT_URL = "https://youtu.be/"
 
 
 def load_config(path: str) -> dict:
@@ -57,6 +59,21 @@ def ensure_promo_in_description(description: str, promo_line: str) -> str:
     if desc.startswith(promo_line):
         return description
     return f"{promo_line}\n\n{description}"
+
+
+def strip_self_video_url(description: str, video_id: str | None) -> str:
+    if not video_id:
+        return description
+    urls = [
+        f"{YOUTUBE_WATCH_URL}{video_id}",
+        f"{YOUTUBE_SHORT_URL}{video_id}",
+    ]
+    cleaned = description
+    for url in urls:
+        cleaned = cleaned.replace(url, "")
+    cleaned = re.sub(r"\[([^\]]*)\]\(\s*\)", r"\1", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
 
 
 def detect_system_timezone() -> str | None:
@@ -238,6 +255,7 @@ def main():
         print("Description is required (use --description or --description-file)", file=sys.stderr)
         sys.exit(1)
     description = ensure_promo_in_description(description, promo_line)
+    description = strip_self_video_url(description, args.update_video_id)
 
     tags = None
     if args.tags:
@@ -377,6 +395,15 @@ def main():
             )
             if needs_comment:
                 insert_promo_comment(youtube, video_id, promo_comment)
+
+        updated_description = strip_self_video_url(description, video_id)
+        if updated_description != description:
+            update_body = {
+                "id": video_id,
+                "snippet": {**snippet, "description": updated_description},
+                "status": status,
+            }
+            youtube.videos().update(part="snippet,status", body=update_body).execute()
 
         print(f"Uploaded video id: {video_id}")
         if args.output_video_id:

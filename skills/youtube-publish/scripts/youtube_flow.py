@@ -219,6 +219,44 @@ def extract_section(md_text, heading):
     return "\n".join(out).strip()
 
 
+def validate_final_content(md_text: str, workdir: Path, require_thumbnail: bool) -> None:
+    required_sections = [
+        ("Título (final)", "title"),
+        ("Descripción (final)", "description"),
+        ("Capítulos (final)", "chapters"),
+        ("Post LinkedIn (final)", "linkedin"),
+        ("Newsletter (final)", "newsletter"),
+        ("Asunto newsletter (final)", "subject"),
+    ]
+
+    errors = []
+    warnings = []
+
+    for heading, label in required_sections:
+        content = extract_section(md_text, heading)
+        if not content:
+            errors.append(f"Missing {label} in '{heading}'.")
+
+    thumbnail = extract_section(md_text, "Thumbnail (final)")
+    if require_thumbnail and not thumbnail:
+        errors.append("Missing thumbnail path in 'Thumbnail (final)'.")
+    if thumbnail:
+        thumb_path = Path(thumbnail.strip())
+        if not thumb_path.is_absolute():
+            thumb_path = (workdir / thumb_path).resolve()
+        if not thumb_path.exists():
+            errors.append(f"Thumbnail file not found: {thumb_path}")
+
+    if errors:
+        message = "Checklist failed:\n- " + "\n- ".join(errors)
+        raise RuntimeError(message)
+
+    if warnings:
+        print("Checklist warnings:")
+        for warning in warnings:
+            print(f"- {warning}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="End-to-end YouTube prep workflow")
     parser.add_argument("--videos", nargs="+", required=True, help="Input video file(s)")
@@ -330,6 +368,7 @@ def main():
         if not content_path:
             raise RuntimeError("content.md required for upload")
         md = content_path.read_text(encoding="utf-8")
+        validate_final_content(md, workdir, require_thumbnail=not args.thumbnail)
         title = extract_section(md, "Título (final)")
         description = extract_section(md, "Descripción (final)")
         thumbnail = extract_section(md, "Thumbnail (final)") or args.thumbnail

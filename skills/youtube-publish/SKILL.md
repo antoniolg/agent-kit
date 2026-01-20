@@ -58,6 +58,8 @@ Newsletter style:
    - blank line
    - “Antonio.”
 - Campaign name and subject must be prefixed with: “🧑‍💻 [DEV]”
+- The flow removes any self-link to the current YouTube video from the description.
+- The flow validates required final content (title, description, chapters, thumbnail, LinkedIn, newsletter, subject) before upload.
 
 ## Scripted flow (order)
 
