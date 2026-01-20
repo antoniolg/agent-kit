@@ -42,13 +42,19 @@ def main():
     )
     parser.add_argument(
         "--input-image", "-i",
-        help="Optional input image path for editing/modification"
+        nargs="+",
+        help="Optional input image path(s) for editing/modification"
     )
     parser.add_argument(
         "--resolution", "-r",
         choices=["1K", "2K", "4K"],
         default="1K",
         help="Output resolution: 1K (default), 2K, or 4K"
+    )
+    parser.add_argument(
+        "--model",
+        default="models/gemini-3-pro-image-preview",
+        help="Model name (default: models/gemini-3-pro-image-preview)"
     )
     parser.add_argument(
         "--api-key", "-k",
@@ -79,32 +85,36 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Load input image if provided
-    input_image = None
+    input_images = []
     output_resolution = args.resolution
     if args.input_image:
         try:
-            input_image = PILImage.open(args.input_image)
-            print(f"Loaded input image: {args.input_image}")
+            for image_path in args.input_image:
+                image = PILImage.open(image_path)
+                input_images.append(image)
+                print(f"Loaded input image: {image_path}")
 
             # Auto-detect resolution if not explicitly set by user
             if args.resolution == "1K":  # Default value
                 # Map input image size to resolution
-                width, height = input_image.size
-                max_dim = max(width, height)
+                max_dim = 0
+                for image in input_images:
+                    width, height = image.size
+                    max_dim = max(max_dim, width, height)
                 if max_dim >= 3000:
                     output_resolution = "4K"
                 elif max_dim >= 1500:
                     output_resolution = "2K"
                 else:
                     output_resolution = "1K"
-                print(f"Auto-detected resolution: {output_resolution} (from input {width}x{height})")
+                print(f"Auto-detected resolution: {output_resolution} (from input max dim {max_dim}px)")
         except Exception as e:
             print(f"Error loading input image: {e}", file=sys.stderr)
             sys.exit(1)
 
     # Build contents (image first if editing, prompt only if generating)
-    if input_image:
-        contents = [input_image, args.prompt]
+    if input_images:
+        contents = input_images + [args.prompt]
         print(f"Editing image with resolution {output_resolution}...")
     else:
         contents = args.prompt
@@ -112,19 +122,44 @@ def main():
 
     try:
         response = client.models.generate_content(
-            model="gemini-3-pro-image-preview",
+            model=args.model,
             contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=["TEXT", "IMAGE"],
-                image_config=types.ImageConfig(
-                    image_size=output_resolution
-                )
-            )
+            config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
         )
 
         # Process response and convert to PNG
         image_saved = False
-        for part in response.parts:
+        parts = getattr(response, "parts", None)
+        if not parts and getattr(response, "candidates", None):
+            for candidate in response.candidates:
+                content = getattr(candidate, "content", None)
+                if content and getattr(content, "parts", None):
+                    parts = content.parts
+                    break
+        if not parts:
+            # Retry once to reduce transient failures.
+            response = client.models.generate_content(
+                model=args.model,
+                contents=contents,
+                config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+            )
+            parts = getattr(response, "parts", None)
+            if not parts and getattr(response, "candidates", None):
+                for candidate in response.candidates:
+                    content = getattr(candidate, "content", None)
+                    if content and getattr(content, "parts", None):
+                        parts = content.parts
+                        break
+        if not parts:
+            print("Error: No response parts found in model output.", file=sys.stderr)
+            try:
+                print(f"Response debug: {response}", file=sys.stderr)
+                if hasattr(response, "model_dump"):
+                    print(f"Response dump: {response.model_dump()}", file=sys.stderr)
+            except Exception:
+                pass
+            sys.exit(1)
+        for part in parts:
             if part.text is not None:
                 print(f"Model response: {part.text}")
             elif part.inline_data is not None:
