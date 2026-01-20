@@ -22,10 +22,12 @@ from googleapiclient.http import MediaFileUpload
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
 ]
 
 DEFAULT_CONFIG_PATH = os.path.expanduser("~/.config/youtube-publish/config.yaml")
 DEFAULT_TOKEN_PATH = os.path.expanduser("~/.config/youtube-publish/token.json")
+DEFAULT_PROMO_LINE = "Domina la IA para el desarrollo de Software 👉 https://devexpert.io/cursos/expert/ai"
 
 
 def load_config(path: str) -> dict:
@@ -34,6 +36,27 @@ def load_config(path: str) -> dict:
         return {}
     data = yaml.safe_load(p.read_text(encoding="utf-8"))
     return data or {}
+
+
+def resolve_promo_line(config: dict) -> str:
+    env_line = os.environ.get("YOUTUBE_PROMO_LINE")
+    cfg_line = config.get("promo_line") if isinstance(config, dict) else None
+    return (env_line or cfg_line or DEFAULT_PROMO_LINE or "").strip()
+
+
+def resolve_promo_comment(config: dict, promo_line: str) -> str:
+    env_comment = os.environ.get("YOUTUBE_PROMO_COMMENT")
+    cfg_comment = config.get("promo_comment") if isinstance(config, dict) else None
+    return (env_comment or cfg_comment or promo_line or "").strip()
+
+
+def ensure_promo_in_description(description: str, promo_line: str) -> str:
+    if not promo_line:
+        return description
+    desc = description.strip()
+    if desc.startswith(promo_line):
+        return description
+    return f"{promo_line}\n\n{description}"
 
 
 def detect_system_timezone() -> str | None:
@@ -137,6 +160,41 @@ def upload_video(youtube, video_path: str, body: dict, thumbnail_path: str = Non
     return video_id
 
 
+def insert_promo_comment(youtube, video_id: str, comment_text: str):
+    if not comment_text:
+        return
+    text = comment_text.strip()
+    if not text:
+        return
+    # Avoid duplicate promo comments when re-running.
+    try:
+        existing = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            maxResults=20,
+            order="time",
+        ).execute()
+        for item in existing.get("items", []):
+            top = item.get("snippet", {}).get("topLevelComment", {}).get("snippet", {})
+            existing_text = (top.get("textOriginal") or "").strip()
+            if existing_text == text:
+                print("Promo comment already exists; skipping.")
+                return
+    except Exception as exc:
+        print(f"Warning: could not list comments before insert: {exc}", file=sys.stderr)
+
+    youtube.commentThreads().insert(
+        part="snippet",
+        body={
+            "snippet": {
+                "videoId": video_id,
+                "topLevelComment": {"snippet": {"textOriginal": text}},
+            }
+        },
+    ).execute()
+    print("Inserted promo comment.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Upload and schedule a YouTube video")
     parser.add_argument("--video", help="Path to video file")
@@ -159,6 +217,8 @@ def main():
     args = parser.parse_args()
 
     config = load_config(args.config)
+    promo_line = resolve_promo_line(config)
+    promo_comment = resolve_promo_comment(config, promo_line)
 
     if not args.update_video_id:
         if not args.video:
@@ -177,6 +237,7 @@ def main():
     if not description:
         print("Description is required (use --description or --description-file)", file=sys.stderr)
         sys.exit(1)
+    description = ensure_promo_in_description(description, promo_line)
 
     tags = None
     if args.tags:
@@ -238,29 +299,84 @@ def main():
 
     youtube = get_authenticated_service(args.client_secret, args.token)
 
+    needs_comment = bool(promo_comment)
+    needs_schedule = bool(publish_at)
+
     if args.update_video_id:
-        update_body = {
-            "id": args.update_video_id,
-            "snippet": snippet,
-            "status": status,
-        }
-        youtube.videos().update(part="snippet,status", body=update_body).execute()
-        if args.thumbnail:
-            youtube.thumbnails().set(
-                videoId=args.update_video_id,
-                media_body=MediaFileUpload(args.thumbnail),
-            ).execute()
+        if needs_schedule and needs_comment:
+            temp_status = {
+                "privacyStatus": "unlisted",
+                "selfDeclaredMadeForKids": made_for_kids,
+            }
+            temp_body = {
+                "id": args.update_video_id,
+                "snippet": snippet,
+                "status": temp_status,
+            }
+            youtube.videos().update(part="snippet,status", body=temp_body).execute()
+            if args.thumbnail:
+                youtube.thumbnails().set(
+                    videoId=args.update_video_id,
+                    media_body=MediaFileUpload(args.thumbnail),
+                ).execute()
+            insert_promo_comment(youtube, args.update_video_id, promo_comment)
+            final_body = {
+                "id": args.update_video_id,
+                "snippet": snippet,
+                "status": status,
+            }
+            youtube.videos().update(part="snippet,status", body=final_body).execute()
+        else:
+            update_body = {
+                "id": args.update_video_id,
+                "snippet": snippet,
+                "status": status,
+            }
+            youtube.videos().update(part="snippet,status", body=update_body).execute()
+            if args.thumbnail:
+                youtube.thumbnails().set(
+                    videoId=args.update_video_id,
+                    media_body=MediaFileUpload(args.thumbnail),
+                ).execute()
+            if needs_comment:
+                insert_promo_comment(youtube, args.update_video_id, promo_comment)
         print(f"Updated video id: {args.update_video_id}")
         if publish_at:
             print(f"Scheduled for: {publish_at} (UTC)")
     else:
-        video_id = upload_video(
-            youtube=youtube,
-            video_path=str(video_path),
-            body=body,
-            thumbnail_path=args.thumbnail,
-            notify_subscribers=notify_subscribers,
-        )
+        if needs_schedule and needs_comment:
+            temp_status = {
+                "privacyStatus": "unlisted",
+                "selfDeclaredMadeForKids": made_for_kids,
+            }
+            temp_body = {
+                "snippet": snippet,
+                "status": temp_status,
+            }
+            video_id = upload_video(
+                youtube=youtube,
+                video_path=str(video_path),
+                body=temp_body,
+                thumbnail_path=args.thumbnail,
+                notify_subscribers=notify_subscribers,
+            )
+            insert_promo_comment(youtube, video_id, promo_comment)
+            final_body = {
+                "id": video_id,
+                "snippet": snippet,
+                "status": status,
+            }
+            youtube.videos().update(part="snippet,status", body=final_body).execute()
+        else:
+            video_id = upload_video(
+                youtube=youtube,
+                video_path=str(video_path),
+                body=body,
+                thumbnail_path=args.thumbnail,
+                notify_subscribers=notify_subscribers,
+            )
+            if needs_comment:
+                insert_promo_comment(youtube, video_id, promo_comment)
 
         print(f"Uploaded video id: {video_id}")
         if args.output_video_id:

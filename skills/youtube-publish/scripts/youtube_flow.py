@@ -145,15 +145,15 @@ def generate_content_md(srt_text, workdir: Path, title_hint: str, video_url: str
         "- Post LinkedIn (optimizado para LinkedIn, conversacional)\n"
         "- Newsletter (tono cercano, 220-320 palabras, CTA a comentar en el vídeo)\n\n"
         "Newsletter estructura:\n"
-        "1) Saludo + contexto personal breve (1-2 frases)\n"
+        "1) Saludo fijo: \"¡Hola DevExpert!\" + contexto personal breve (1-2 frases)\n"
         "2) Desarrollo con 2-3 párrafos (qué probé, qué aprendí, por qué importa)\n"
         "3) 'En el vídeo verás:' + 2-4 bullets\n"
-        "4) Línea con el enlace exacto al vídeo\n"
+        "4) Línea con enlace en Markdown al vídeo (ej: [Ver el vídeo](URL))\n"
         "5) Cierre cercano + CTA: deja tu opinión en los comentarios del vídeo\n"
-        "6) P.D. opcional (1 frase)\n"
+        "6) Despedida exacta con salto de línea: \"Un abrazo,\" luego línea en blanco y \"Antonio.\"\n"
+        "7) P.D. opcional (1 frase)\n"
         "Incluye al inicio de la newsletter:\n"
-        "- Asunto: ...\n"
-        "- Preheader: ...\n"
+        "- Asunto (sin prefijo, se añadirá automáticamente): ...\n"
         "Varía la apertura y el ritmo; evita plantillas repetitivas.\n"
         "Incluye el enlace del vídeo en la newsletter.\n"
         "Post LinkedIn reglas:\n"
@@ -188,8 +188,6 @@ def generate_content_md(srt_text, workdir: Path, title_hint: str, video_url: str
 ## Newsletter (final)
 
 ## Asunto newsletter (final)
-
-## Preheader newsletter (final)
 
 ## Thumbnail (final)
 
@@ -385,7 +383,6 @@ def main():
         if scheduled_iso:
             linkedin_text = extract_section(md, "Post LinkedIn (final)")
             subject = extract_section(md, "Asunto newsletter (final)")
-            preheader = extract_section(md, "Preheader newsletter (final)")
             newsletter = extract_section(md, "Newsletter (final)")
 
             if not linkedin_text or not subject or not newsletter:
@@ -415,8 +412,6 @@ def main():
                 campaign_name,
                 "--subject",
                 subject.strip(),
-                "--preheader",
-                preheader.strip(),
                 "--body-file",
                 str(newsletter_path),
                 "--send-at",

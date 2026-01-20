@@ -37,7 +37,7 @@ On first run, the script prints a URL. Open it, approve access, then paste the f
 - Determine timezone from the system; if you cannot infer it, ask the user. Always pass `--timezone`.
 - Generate thumbnails by default unless the user explicitly provides them.
 - Upload a private draft before generating copy so the video URL can be used in newsletter/social text.
-- In the newsletter include the video URL. In social posts, say “Link en el primer comentario.”
+- In the newsletter include a markdown link to the video with descriptive text (e.g., `[Ver el vídeo](https://...)`). In social posts, say “Link en el primer comentario.”
 - Schedule social posts + newsletter 15 minutes after the YouTube publish time (if provided).
 
 LinkedIn post style (YouTube videos only):
@@ -50,7 +50,14 @@ LinkedIn post style (YouTube videos only):
 Newsletter style:
 - Long-form (220–320 words), conversational, same tone as DevExpert.
 - Structure: greeting + context, 2–3 development paragraphs, “En el vídeo verás:” + 2–4 bullets, line with link, closing + CTA to comment, optional P.S.
+- Always start the newsletter with: “¡Hola DevExpert!”
 - Vary the opening and pacing; avoid repetitive templates.
+ - The video link must be a markdown link with descriptive text.
+ - Sign-off must be:
+   - “Un abrazo,”
+   - blank line
+   - “Antonio.”
+- Campaign name and subject must be prefixed with: “🧑‍💻 [DEV]”
 
 ## Scripted flow (order)
 
@@ -75,7 +82,6 @@ Use `gemini` CLI on the cleaned SRT. Generate:
 - LinkedIn post (rules above)
 - Newsletter (rules above) including:
   - Asunto
-  - Preheader
 - Ensure LinkedIn has no hashtags.
 - Save all into `<workdir>/content.md` (agent decides final versions).
 
@@ -97,7 +103,7 @@ Create 3 images into `<workdir>/thumb-1.png`, `thumb-2.png`, `thumb-3.png`.
 - Posts include first comment with the video URL and attach the thumbnail.
 
 8) Schedule newsletter (Listmonk)
-`python scripts/schedule_newsletter.py --name "YouTube: <title>" --subject "..." --preheader "..." --body-file <newsletter.md> --send-at <ISO8601+offset>`
+`python scripts/schedule_newsletter.py --name "YouTube: <title>" --subject "..." --body-file <newsletter.md> --send-at <ISO8601+offset>`
 - List ID comes from `youtube_publish.listmonk_list_id` in `~/.config/skills/config.json` (or pass `--list-id`).
 
 Note: If no publish time, skip steps 7–8 unless the user asks to schedule anyway.

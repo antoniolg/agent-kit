@@ -19,12 +19,12 @@ def upload_image(path):
         return None
     raw = run(["postiz", "upload", "--file-path", path])
     data = json.loads(raw)
-    for key in ["url", "public_url", "publicUrl"]:
+    for key in ["url", "public_url", "publicUrl", "path"]:
         if key in data:
             return data[key]
     if "file" in data:
         file_obj = data["file"]
-        for key in ["url", "public_url", "publicUrl"]:
+        for key in ["url", "public_url", "publicUrl", "path"]:
             if key in file_obj:
                 return file_obj[key]
     return None
@@ -112,15 +112,15 @@ def main():
 
     image_url = upload_image(args.image) if args.image else None
 
-    content_json = json.dumps([text, args.comment_url])
+    # Postiz CLI expects --content multiple times to build a thread.
+    content_args = ["--content", text, "--content", args.comment_url]
 
     for integration_id in integrations:
         cmd = [
             "postiz",
             "posts",
             "create",
-            "--content",
-            content_json,
+            *content_args,
             "--integrations",
             integration_id,
             "--status",
@@ -129,7 +129,7 @@ def main():
             args.scheduled_date,
         ]
         if image_url:
-            cmd += ["--images", json.dumps([image_url])]
+            cmd += ["--images", image_url]
         run(cmd)
 
     print("Scheduled socials.")
