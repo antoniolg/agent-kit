@@ -5,7 +5,7 @@ A curated catalog of Agent Skills plus supporting docs, scripts, and assets.
 ## Repository layout
 
 - `skills/` — all skills (SKILL.md + resources)
-- `skills/3rd-party/` — vendored third‑party skills
+- `skills/3rd-*/` — vendored third‑party skills (flattened to avoid subfolders)
 - `skills/skill-creator/` — canonical guide + tooling for creating skills
 - `AGENTS.md` — local agent operating rules for this repo
 

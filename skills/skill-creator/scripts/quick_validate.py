@@ -42,6 +42,7 @@ def validate_skill(skill_path):
     ALLOWED_PROPERTIES = {
         'name',
         'description',
+        'homepage',
         'license',
         'compatibility',
         'metadata',
@@ -78,9 +79,12 @@ def validate_skill(skill_path):
     # Check name length (max 64 characters per spec)
     if len(name) > 64:
         return False, f"Name is too long ({len(name)} characters). Maximum is 64 characters."
-    # Check directory match
-    if skill_path.name != name:
-        return False, f"Skill directory name '{skill_path.name}' must match frontmatter name '{name}'"
+    # Check directory match (allow vendored prefix)
+    if skill_path.name != name and skill_path.name != f"3rd-{name}":
+        return False, (
+            f"Skill directory name '{skill_path.name}' must match frontmatter name '{name}' "
+            f"(or '3rd-{name}' for vendored skills)"
+        )
 
     # Extract and validate description
     description = frontmatter.get('description', '')
