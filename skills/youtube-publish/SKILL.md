@@ -12,7 +12,7 @@ Use scripts in order. No interactive pauses. The agent decides final values and 
 - **Tone & Authority:** Strictly avoid clickbait terms ("Fácil", "Rápido", "Secreto"). Titles and copy must focus on engineering, architecture, and solving developer friction.
 - **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
 - **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
-- **Thumbnail Generation:** Generate 3 thumbnails by default using Antonio’s photo context (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). Style: Dark mode, minimalist, cinematic lighting (cyan/purple), featuring a "Technical Artifact" (logo, code snippet, or nodes).
+- **Thumbnail Generation:** Generate 3 thumbnails by default using Antonio’s photo context (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). Style: Dark mode, minimalist, cinematic lighting (cyan/purple), featuring a "Technical Artifact" (logo, code snippet, or nodes), or the person working in a dark office, server bunker, architect drafting table. Check what fits better to tell the story of the video. Bold white text. Use max 3-4 words.
 - **Workflow:** Upload a private draft before generating copy so the video URL can be used in newsletter/social text.
 - **Links:** In the newsletter, include a markdown link to the video with descriptive text. In social posts, say “Link en el primer comentario.”
 - **Timing:** Schedule social posts + newsletter 15 minutes after the YouTube publish time.
@@ -42,6 +42,8 @@ Use scripts in order. No interactive pauses. The agent decides final values and 
   - Optional P.S.
 - **Sign-off**: Must be “Un abrazo,” (blank line) “Antonio.”
 - **Variety**: Vary the opening and pacing; avoid repetitive templates.
+
+Don't include the title in the content of the newsletter.
 
 ---
 
