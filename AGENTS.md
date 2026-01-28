@@ -13,6 +13,7 @@ Antonio owns this.
 - Keep files <~500 LOC; split/refactor as needed.
 - Commits: Conventional Commits (`feat|fix|refactor|build|ci|chore|docs|style|perf|test`).
 - Editor: `code <path>`.
+- When asked to open a file: use `code` for code/Markdown files, otherwise use `open`.
 - CI: `gh run list/view` (rerun/fix til green).
 - Prefer end-to-end verify; if blocked, say what’s missing.
 - New deps: quick health check (recent releases/commits, adoption).
