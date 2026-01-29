@@ -164,6 +164,7 @@ def main() -> int:
             {
                 "video_id": video_id,
                 "title": snippet.get("title") or item.get("snippet", {}).get("title"),
+                "description": snippet.get("description") or item.get("snippet", {}).get("description"),
                 "published_at": snippet.get("publishedAt") or item.get("snippet", {}).get("publishedAt"),
                 "privacy_status": status.get("privacyStatus"),
                 "duration_seconds": duration_seconds,
