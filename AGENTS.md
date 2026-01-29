@@ -42,6 +42,7 @@ Antonio owns this.
 - Keep notes short; update docs when behavior/API changes (no ship w/o docs).
 - Add `read_when` hints on cross-cutting docs.
 - When creating new skills, write the skill content in English (including `SKILL.md`).
+- Skills are public: avoid any sensitive data (tokens, internal URLs, IDs, private paths). Use placeholders or env vars.
 
 ## PR Feedback
 
