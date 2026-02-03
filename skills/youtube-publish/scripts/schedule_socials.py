@@ -84,6 +84,7 @@ def main():
     parser.add_argument("--image", help="Thumbnail image path")
     parser.add_argument("--integrations", help="Comma-separated Postiz integration IDs")
     parser.add_argument("--group", help="Postiz group name from config (default: youtube_publish)")
+    parser.add_argument("--comment-text", default="🎥 Tienes el vídeo completo y la explicación técnica aquí:", help="Text prefix for the comment link")
     args = parser.parse_args()
 
     skills_cfg = load_skills_config()
@@ -105,15 +106,12 @@ def main():
     text = open(args.text_file, "r", encoding="utf-8").read().strip()
     if "#" in text:
         text = text.replace("#", "")
-    if not text.endswith("Link en el primer comentario."):
-        if not text.endswith("."):
-            text += "."
-        text += "\n\nLink en el primer comentario."
 
     image_url = upload_image(args.image) if args.image else None
 
     # Postiz CLI expects --content multiple times to build a thread.
-    content_args = ["--content", text, "--content", args.comment_url]
+    comment_content = f"{args.comment_text} {args.comment_url}"
+    content_args = ["--content", text, "--content", comment_content]
 
     for integration_id in integrations:
         cmd = [
