@@ -88,9 +88,9 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      python scripts/schedule_socials.py --text-file <linkedin.txt> --scheduled-date <ISO8601+offset> --comment-url <video_url> --image <thumb.png>
      ```
    - Use `x-es` by default for X.
+   - Note: `schedule_socials.py` percent-encodes underscores in the `--comment-url` (e.g. `_` -> `%5F`) to avoid LinkedIn/Postiz URL formatting issues.
 
 9. **Final Reminder**
    - Explicitly remind the user to go to YouTube Studio to:
      - Enable monetization (not supported via API).
      - Add End Screens (not supported via API).
-

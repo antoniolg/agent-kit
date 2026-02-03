@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import subprocess
+from urllib.parse import urlsplit, urlunsplit
 
 SKILLS_CONFIG_PATH = os.path.expanduser("~/.config/skills/config.json")
 
@@ -76,6 +77,19 @@ def resolve_group_integrations(group_name: str, postiz: dict) -> list[str]:
     return resolved
 
 
+def encode_underscores_in_url(url: str) -> str:
+    """
+    Some platforms (notably LinkedIn via Postiz) can mangle URLs that contain
+    underscores (e.g. treat them as formatting markers). Percent-encoding
+    underscores keeps the URL valid and avoids that formatting issue.
+    """
+    if not url:
+        return url
+    parts = urlsplit(url)
+    rebuilt = urlunsplit(parts)
+    return rebuilt.replace("_", "%5F")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Schedule socials via Postiz CLI")
     parser.add_argument("--text-file", required=True, help="Path to post text")
@@ -110,7 +124,8 @@ def main():
     image_url = upload_image(args.image) if args.image else None
 
     # Postiz CLI expects --content multiple times to build a thread.
-    comment_content = f"{args.comment_text} {args.comment_url}"
+    safe_comment_url = encode_underscores_in_url(args.comment_url)
+    comment_content = f"{args.comment_text} {safe_comment_url}"
     content_args = ["--content", text, "--content", comment_content]
 
     for integration_id in integrations:
