@@ -18,6 +18,7 @@ Antonio owns this.
 - Prefer end-to-end verify; if blocked, say what’s missing.
 - New deps: quick health check (recent releases/commits, adoption).
 - Web: search early; quote exact errors; prefer 2025 sources;
+- Transcription: when asked to transcribe video/audio, use `parakeet-mlx` by default (already installed).
 
 ## Screenshots (“use a screenshot”)
 
