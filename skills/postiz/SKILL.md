@@ -37,6 +37,12 @@ postiz upload-file --file-path /path/to/image.jpg --pretty
 #### 3. Create a Post
 Create a single post or a thread.
 
+**Draft (safe default):**
+If `--status` is omitted, the post is created as draft by default.
+```bash
+postiz posts create --content "Your post text" --integrations <id> --pretty
+```
+
 **Single post:**
 ```bash
 postiz posts create --content "Your post text" --integrations <id> --status now --pretty
