@@ -1,9 +1,46 @@
 ---
 name: bird-cli
-description: Use the bird CLI to access X/Twitter accounts, including reading timelines/mentions and listing unanswered mentions by date. Trigger when asked to use bird for whoami, home/mentions, or to detect replies.
+description: Read-only usage of the bird CLI for X/Twitter accounts (timelines, mentions, and analysis). Trigger when asked to inspect whoami, timelines, mentions, replies, search, or reporting tasks without account mutations.
 ---
 
 # Bird CLI
+
+## Safety Policy (Hard Rules)
+
+This skill is **read-only** with respect to X/Twitter account state.
+
+- Never use commands that publish or mutate account state.
+- If a request asks for posting or account mutations, refuse that part and offer a read-only alternative.
+
+### Forbidden Commands (never run)
+
+- `bird tweet`
+- `bird reply`
+- `bird follow`
+- `bird unfollow`
+- `bird unbookmark`
+
+### Allowed Commands (query/inspection only)
+
+- `bird whoami`
+- `bird check`
+- `bird read`
+- `bird replies`
+- `bird thread`
+- `bird search`
+- `bird mentions`
+- `bird bookmarks`
+- `bird likes`
+- `bird home`
+- `bird following`
+- `bird followers`
+- `bird lists`
+- `bird list-timeline`
+- `bird about`
+- `bird user-tweets`
+- `bird news` / `bird trending`
+- `bird query-ids` (including `--fresh`)
+- `bird <tweet-id-or-url>` shorthand (read-only alias of `bird read`)
 
 ## Quick Start
 
