@@ -109,3 +109,7 @@ Antonio owns this.
 
 - Use only when you need persistence/interaction (debugger/server).
 - Quick refs: `tmux new -d -s codex-shell`, `tmux attach -t codex-shell`, `tmux list-sessions`, `tmux kill-session -t codex-shell`.
+
+## GitHub CLI formatting note
+- For `gh pr` / `gh issue` bodies, avoid literal escaped `\\n` sequences.
+- Use real multiline text (heredoc) or `--body-file` to preserve line breaks.
