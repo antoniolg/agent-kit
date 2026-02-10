@@ -22,7 +22,7 @@ Omit any source with no results.
 3) Tasks: run `justdoit next --ids` and show the full output **without** the suffixes ` (due YYYY-MM-DD)` or ` [id: ...]`. Keep sections (Today/This week/Backlog) and calendar lines.
 4) Slack: run `scripts/slack-inbox --json-out /tmp/slack-inbox.json` and show only the clean list. Save metadata.
 5) WhatsApp: run `scripts/whatsapp-inbox --json-out /tmp/whatsapp-inbox.json` and show only the clean list. Save metadata.
-6) X: run `python scripts/unanswered_mentions.py --cookie-source chrome --show-text --limit 50 --json-out /tmp/bird-unanswered.json --numbered` from the bird-cli skill folder (uses defaults from `~/.config/skills/config.json` if present).
+6) X: run `python scripts/unanswered_mentions.py --cookie-source chrome --show-text --limit 50 --json-out /tmp/bird-unanswered.json --numbered` from the bird-cli skill folder (uses defaults from `~/.config/skills/config.json` if present). Always include the tweet URL as a clickable Markdown link for each mention (format: `[→ link](url)`).
 7) If a source returns no results, omit it from the output.
 8) Do not propose actions or replies (except the email triage emojis). Only report.
 9) If there are errors or missing credentials, include an "Incidents" section with the exact error.
@@ -45,7 +45,7 @@ Omit any source with no results.
 <clean list>
 
 **X**
-<unanswered mentions>
+<unanswered mentions — each entry MUST include the tweet URL as a Markdown link, e.g. [@handle (date): "text" [→ link](url)>
 
 **Incidents**
 - <source>: <exact error>
