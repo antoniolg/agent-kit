@@ -10,7 +10,9 @@ Genera la newsletter semanal recopilando todo el contenido publicado y programad
 ## Cuándo se usa
 
 - Cada jueves antes de enviar la newsletter
-- El rango de contenido es: **viernes anterior hasta jueves actual** (inclusive)
+- Rangos de contenido:
+  - **X (tweets propios + bookmarks) y Postiz**: viernes anterior → miércoles (inclusive)
+  - **YouTube**: viernes anterior → jueves (inclusive) — el vídeo del jueves es clave, la newsletter le da empuje
 
 ## Flujo de trabajo
 
@@ -82,10 +84,16 @@ listmonk campaigns create \
   --body-file /tmp/newsletter-YYYY-MM-DD.md
 ```
 
+Habilitar el archivo público de la campaña:
+```bash
+listmonk campaigns archive <id> --enable
+```
+
 Tras crear el borrador, **abrir la campaña en el navegador** con:
 ```
 open "<LISTMONK_BASE_URL>/admin/campaigns/<id>"
 ```
+La URL base de Listmonk está en `~/.config/skills/config.json` bajo `listmonk.base_url`.
 
 Para actualizar tras cambios:
 ```bash
