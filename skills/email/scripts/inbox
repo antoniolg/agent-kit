@@ -8,6 +8,7 @@ import subprocess
 from email.header import decode_header
 from email.utils import parseaddr
 from getpass import getpass
+from typing import List, Optional, Tuple
 
 ICLOUD_HOST = "imap.mail.me.com"
 ICLOUD_PORT = 993
@@ -117,7 +118,7 @@ def load_skills_config() -> dict:
         return {}
 
 
-def get_email_config() -> tuple[list[str], str | None]:
+def get_email_config() -> Tuple[List[str], Optional[str]]:
     cfg = load_skills_config().get("email", {})
     gmail_accounts = cfg.get("gmail_accounts", [])
     if isinstance(gmail_accounts, str):
