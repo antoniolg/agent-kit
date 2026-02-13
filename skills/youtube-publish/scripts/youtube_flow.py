@@ -73,6 +73,15 @@ def safe_slug(text):
     return text or "video"
 
 
+def read_existing_video_id(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    video_id = path.read_text(encoding="utf-8").strip()
+    if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+        return video_id
+    return None
+
+
 def ensure_dir(path: Path):
     path.mkdir(parents=True, exist_ok=True)
 
@@ -294,32 +303,40 @@ def main():
     video_id = None
     video_url = None
     if not args.skip_draft_upload:
-        draft_title = args.title_hint or video_out.stem.replace("-", " ").title()
-        draft_desc = workdir / "description.draft.txt"
-        draft_desc.write_text("Draft upload. Metadata will be updated.", encoding="utf-8")
         video_id_path = workdir / "video_id.txt"
-        cmd = [
-            sys.executable,
-            str(Path(__file__).parent / "publish_youtube.py"),
-            "--video",
-            str(video_out),
-            "--title",
-            draft_title,
-            "--description-file",
-            str(draft_desc),
-            "--privacy-status",
-            "private",
-            "--output-video-id",
-            str(video_id_path),
-            "--client-secret",
-            args.client_secret,
-        ]
-        run(cmd)
-        if video_id_path.exists():
-            video_id = video_id_path.read_text(encoding="utf-8").strip()
+        existing_video_id = read_existing_video_id(video_id_path)
+        if existing_video_id:
+            video_id = existing_video_id
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            (workdir / "video_url.txt").write_text(video_url, encoding="utf-8")
+            print(f"Reusing existing draft video id: {video_id}")
+        else:
+            draft_title = args.title_hint or video_out.stem.replace("-", " ").title()
+            draft_desc = workdir / "description.draft.txt"
+            draft_desc.write_text("Draft upload. Metadata will be updated.", encoding="utf-8")
+            cmd = [
+                sys.executable,
+                str(Path(__file__).parent / "publish_youtube.py"),
+                "--video",
+                str(video_out),
+                "--title",
+                draft_title,
+                "--description-file",
+                str(draft_desc),
+                "--privacy-status",
+                "private",
+                "--output-video-id",
+                str(video_id_path),
+                "--client-secret",
+                args.client_secret,
+            ]
+            run(cmd)
+            video_id = read_existing_video_id(video_id_path)
             if video_id:
                 video_url = f"https://www.youtube.com/watch?v={video_id}"
                 (workdir / "video_url.txt").write_text(video_url, encoding="utf-8")
+            else:
+                raise RuntimeError(f"Draft upload finished but no valid video id in {video_id_path}")
 
     srt_path = None
     cleaned_srt_path = None

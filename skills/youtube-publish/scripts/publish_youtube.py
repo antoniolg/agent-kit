@@ -177,6 +177,12 @@ def upload_video(youtube, video_path: str, body: dict, thumbnail_path: str = Non
     return video_id
 
 
+def persist_output_video_id(output_video_id_path: str | None, video_id: str) -> None:
+    if not output_video_id_path:
+        return
+    Path(output_video_id_path).write_text(video_id, encoding="utf-8")
+
+
 def insert_promo_comment(youtube, video_id: str, comment_text: str):
     if not comment_text:
         return
@@ -200,16 +206,22 @@ def insert_promo_comment(youtube, video_id: str, comment_text: str):
     except Exception as exc:
         print(f"Warning: could not list comments before insert: {exc}", file=sys.stderr)
 
-    youtube.commentThreads().insert(
-        part="snippet",
-        body={
-            "snippet": {
-                "videoId": video_id,
-                "topLevelComment": {"snippet": {"textOriginal": text}},
-            }
-        },
-    ).execute()
-    print("Inserted promo comment.")
+    try:
+        youtube.commentThreads().insert(
+            part="snippet",
+            body={
+                "snippet": {
+                    "videoId": video_id,
+                    "topLevelComment": {"snippet": {"textOriginal": text}},
+                }
+            },
+        ).execute()
+        print("Inserted promo comment.")
+    except Exception as exc:
+        print(
+            f"Warning: could not insert promo comment (continuing): {exc}",
+            file=sys.stderr,
+        )
 
 
 def main():
@@ -378,6 +390,7 @@ def main():
                 thumbnail_path=args.thumbnail,
                 notify_subscribers=notify_subscribers,
             )
+            persist_output_video_id(args.output_video_id, video_id)
             insert_promo_comment(youtube, video_id, promo_comment)
             final_body = {
                 "id": video_id,
@@ -393,6 +406,7 @@ def main():
                 thumbnail_path=args.thumbnail,
                 notify_subscribers=notify_subscribers,
             )
+            persist_output_video_id(args.output_video_id, video_id)
             if needs_comment:
                 insert_promo_comment(youtube, video_id, promo_comment)
 
@@ -406,8 +420,7 @@ def main():
             youtube.videos().update(part="snippet,status", body=update_body).execute()
 
         print(f"Uploaded video id: {video_id}")
-        if args.output_video_id:
-            Path(args.output_video_id).write_text(video_id, encoding="utf-8")
+        persist_output_video_id(args.output_video_id, video_id)
         if publish_at:
             print(f"Scheduled for: {publish_at} (UTC)")
         print(f"Notify subscribers: {notify_subscribers}")
