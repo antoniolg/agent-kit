@@ -110,6 +110,9 @@ Antonio owns this.
 - Use only when you need persistence/interaction (debugger/server).
 - Quick refs: `tmux new -d -s codex-shell`, `tmux attach -t codex-shell`, `tmux list-sessions`, `tmux kill-session -t codex-shell`.
 
-## GitHub CLI formatting note
-- For `gh pr` / `gh issue` bodies, avoid literal escaped `\\n` sequences.
-- Use real multiline text (heredoc) or `--body-file` to preserve line breaks.
+## GitHub CLI & Git formatting rules
+- NEVER use literal `\n` in commit messages, PR bodies, issue comments, or any `gh` CLI text arguments. The `\n` appears verbatim instead of creating a line break.
+- For multi-line commit messages: use `git commit -m "$(cat <<'EOF'\nline 1\n\nline 2\nEOF\n)"` (heredoc).
+- For `gh pr create` / `gh issue create` / `gh issue close --comment`: use `--body "$(cat <<'EOF'\n...\nEOF\n)"` or `--body-file <path>`.
+- For single-line messages, just use `-m "message"` directly — no escaping needed.
+- When in doubt, write the text to a temp file and use `--body-file`.
