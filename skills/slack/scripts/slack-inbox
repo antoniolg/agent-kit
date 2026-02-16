@@ -83,13 +83,14 @@ def main():
             conv.get("last_read") is None
             or (conv.get("is_im") and conv.get("latest") is None)
         )
-        if needs_info:
+        if needs_info and unread_hint:
             try:
                 info = api_call("conversations.info", token, {"channel": conv.get("id")}, timeout=5)
                 conv = {**conv, **info.get("channel", {})}
             except (SystemExit, KeyboardInterrupt, TimeoutError, Exception):
-                if not unread_hint:
-                    continue
+                continue
+        elif needs_info:
+            continue
 
         unread_hint = conv.get("unread_count") or conv.get("unread_count_display") or unread_hint
         last_read = conv.get("last_read") or ""
