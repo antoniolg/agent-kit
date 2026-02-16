@@ -12,6 +12,11 @@ This skill is **read-only** with respect to X/Twitter account state.
 - Never use commands that publish or mutate account state.
 - If a request asks for posting or account mutations, refuse that part and offer a read-only alternative.
 
+### CRITICAL: bird's default subcommand is `tweet` (PUBLISH)
+- Running `bird <any-text>` without a subcommand will PUBLISH that text as a tweet
+- To READ a tweet, ALWAYS use `bird read <id-or-url>` — never just `bird <id>`
+- This is the #1 source of accidental tweets. Triple-check every bird command.
+
 ### Forbidden Commands (never run)
 
 - `bird tweet`
@@ -40,7 +45,7 @@ This skill is **read-only** with respect to X/Twitter account state.
 - `bird user-tweets`
 - `bird news` / `bird trending`
 - `bird query-ids` (including `--fresh`)
-- `bird <tweet-id-or-url>` shorthand (read-only alias of `bird read`)
+- NEVER run `bird <id-or-url>` without a subcommand — bird's default subcommand is `tweet` (publish), NOT `read`. Always use `bird read <id-or-url>` explicitly.
 
 ## Quick Start
 
