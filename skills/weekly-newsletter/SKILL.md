@@ -272,6 +272,20 @@ Antonio.
 - **Template**: DevExpert (id: 1)
 - **Content-type**: markdown
 
+## Versión HTML para X Articles
+
+Después de programar la newsletter en Listmonk, ofrece a Antonio generar una versión HTML adaptada para publicar como artículo en X.
+
+Si acepta:
+1. Toma el contenido de la newsletter ya aprobada
+2. Conviértelo a HTML limpio (sin estilos inline de email, sin tablas de layout)
+3. Usa tags semánticos: `<h2>`, `<p>`, `<a>`, `<strong>`, `<blockquote>`, `<hr>`
+4. Elimina el CTA de AI Expert (de momento, para medir si el contenido funciona por sí solo)
+5. Elimina el saludo "¡Hola DevExpert!" y el cierre "Un abrazo, Antonio"
+6. Guarda el fichero HTML en `~/Documents/aipal/newsletter-html/YYYY-MM-DD.html`
+7. Genera una imagen de portada para el artículo en formato 2:1 (por ejemplo 1200x600) usando el skill nano-banana-pro, con un diseño relacionado con el tema principal de la newsletter. Guarda la imagen en `~/Documents/aipal/newsletter-html/YYYY-MM-DD-cover.png`
+8. Envía el HTML como documento y la imagen por Telegram para que pueda copiar y pegar en el editor de X Articles
+
 ## Notas
 
 - La newsletter se queda en estado `draft` hasta que Antonio la revise y programe
