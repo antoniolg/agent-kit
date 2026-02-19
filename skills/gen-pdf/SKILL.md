@@ -21,7 +21,7 @@ pip install markdown-it-py[plugins] weasyprint reportlab PyPDF2
 
 ## Rutas clave
 
-- **Logo DevExpert:** Buscar `devexpert-slide-footer.png` dentro del vault de Obsidian (Cerebro). La ruta exacta depende del sistema del usuario.
+- **Logo DevExpert:** `assets/devexpert-logo.png` (relativo a la carpeta de esta skill, `~/.claude/skills/gen-pdf/assets/devexpert-logo.png`)
 - **Output por defecto:** `~/Documents/aipal/40-archive/`
 
 ## Script de generación
@@ -39,7 +39,7 @@ import tempfile
 
 md = MarkdownIt("commonmark", {"breaks": True, "html": True}).enable("table")
 
-LOGO_PATH = "<ruta al logo devexpert-slide-footer.png en el vault Cerebro>"
+LOGO_PATH = os.path.expanduser("~/.claude/skills/gen-pdf/assets/devexpert-logo.png")
 
 CSS_STYLES = """
 @page { size: A4; margin: 2cm 2.5cm; }
