@@ -21,7 +21,7 @@ pip install markdown-it-py[plugins] weasyprint reportlab PyPDF2
 
 ## Rutas clave
 
-- **Logo DevExpert:** `/Users/antonio/Library/Mobile Documents/iCloud~md~obsidian/Documents/Cerebro/150 - 🏆 ACTIVOS/DevExpert/Charlas/Domina las recomposiciones en Jetpack Compose/templates/devexpert-slide-footer.png`
+- **Logo DevExpert:** Buscar `devexpert-slide-footer.png` dentro del vault de Obsidian (Cerebro). La ruta exacta depende del sistema del usuario.
 - **Output por defecto:** `~/Documents/aipal/40-archive/`
 
 ## Script de generación
@@ -39,7 +39,7 @@ import tempfile
 
 md = MarkdownIt("commonmark", {"breaks": True, "html": True}).enable("table")
 
-LOGO_PATH = "/Users/antonio/Library/Mobile Documents/iCloud~md~obsidian/Documents/Cerebro/150 - 🏆 ACTIVOS/DevExpert/Charlas/Domina las recomposiciones en Jetpack Compose/templates/devexpert-slide-footer.png"
+LOGO_PATH = "<ruta al logo devexpert-slide-footer.png en el vault Cerebro>"
 
 CSS_STYLES = """
 @page { size: A4; margin: 2cm 2.5cm; }
@@ -95,7 +95,7 @@ def gen_pdf(input_md, output_pdf, add_logo=True):
 1. Importa o copia la función `gen_pdf` en un script temporal en `/tmp/`
 2. Llámala con `input_md` = ruta al fichero Markdown, `output_pdf` = ruta de salida
 3. `add_logo=True` por defecto (siempre para documentos DevExpert)
-4. Tras generar, copia a `/var/folders/hl/jhc62x9j18sf_50prjn2xl080000gn/T/aipal/documents/` y responde con `[[document:/ruta]]`
+4. Tras generar, copia al directorio temporal de Telegram (`$TMPDIR/aipal/documents/`) y responde con `[[document:/ruta]]`
 
 ## Notas
 
