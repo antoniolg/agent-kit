@@ -9,10 +9,10 @@ Genera la newsletter semanal recopilando todo el contenido publicado y programad
 
 ## Cuándo se usa
 
-- Cada jueves antes de enviar la newsletter
-- Rangos de contenido:
-  - **X (tweets propios + bookmarks) y Postiz**: viernes anterior → miércoles (inclusive)
-  - **YouTube**: viernes anterior → jueves (inclusive) — el vídeo del jueves es clave, la newsletter le da empuje
+- Una vez por semana, en el día/hora que defina el cron activo.
+- Rangos de contenido (agnóstico del día):
+  - **X (tweets propios + bookmarks), Postiz y YouTube**: últimos 7 días hasta el momento de ejecución.
+  - Si hay una fecha/hora de corte indicada por el usuario, usar esa en lugar de la ventana de 7 días.
 
 ## Flujo de trabajo
 
@@ -106,7 +106,7 @@ listmonk campaigns update <id> \
 
 **Regla:** No programar nunca sin confirmación explícita del usuario.
 
-Por defecto, programar para **el jueves a las 17:15** (hora local) salvo que el usuario indique otra cosa.
+Por defecto, programar según el horario que indique el usuario. Si no indica hora, usar una propuesta explícita y pedir confirmación.
 
 ```bash
 listmonk campaigns schedule <id> \
