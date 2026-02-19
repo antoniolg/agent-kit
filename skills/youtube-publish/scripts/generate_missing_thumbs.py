@@ -35,11 +35,12 @@ def build_image_prompt(thumb: dict) -> str:
     return (
         "Create a YouTube thumbnail (16:9). "
         "Use the provided photo as Antonio's portrait (keep identity, face sharp, no distortions). "
-        "Background: dark mode gradient cyan/purple, cinematic lighting, minimalist. "
-        f"Include a technical artifact: {artifact}. "
-        f"Concept: {concept}. "
-        f'Add large bold text (<=4 words): \"{thumb_text}\". '
-        "High contrast, clean typography, no extra text, no watermark."
+        "Keep non-negotiable style anchors: cinematic dark mood with cyan/magenta accents, and massive bold white text. "
+        "Allow creative freedom for composition, scene and storytelling if it improves the concept. "
+        f"Technical artifact suggestion: {artifact}. "
+        f"Concept direction: {concept}. "
+        f'Add massive bold white text (<=4 words): \"{thumb_text}\". '
+        "Prioritize strong mobile readability. High contrast, clean typography, no extra text, no watermark."
     )
 
 

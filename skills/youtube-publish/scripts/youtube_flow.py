@@ -27,6 +27,30 @@ def run(cmd, input_text=None):
     return result.stdout
 
 
+def build_x_native_video(video_path: Path, thumbnail_path: str, workdir: Path) -> Path:
+    thumb = Path(thumbnail_path.strip())
+    if not thumb.is_absolute():
+        thumb = (workdir / thumb).resolve()
+    if not thumb.exists():
+        raise FileNotFoundError(f"Thumbnail for X variant not found: {thumb}")
+
+    output = workdir / "video-x.mp4"
+    cmd = [
+        sys.executable,
+        str(Path(__file__).parent / "build_x_native_video.py"),
+        "--video",
+        str(video_path),
+        "--thumbnail",
+        str(thumb),
+        "--output",
+        str(output),
+        "--intro-ms",
+        "500",
+    ]
+    run(cmd)
+    return output
+
+
 def parse_local_datetime(value: str, tz_name: str) -> datetime:
     dt = datetime.fromisoformat(value)
     if dt.tzinfo is None:
@@ -396,6 +420,11 @@ def main():
         if explicit_private:
             schedule_input = ""
             force_private = True
+        if not schedule_input and not explicit_private:
+            raise RuntimeError(
+                "Missing 'Programación (final)'. Set 'YYYY-MM-DD HH:MM' to schedule, "
+                "or write 'private' to confirm no date."
+            )
 
         if not title or not description:
             raise RuntimeError("Missing final title or description in content.md")
@@ -419,6 +448,8 @@ def main():
             cmd += ["--video", str(video_out)]
         if thumbnail:
             cmd += ["--thumbnail", thumbnail.strip()]
+            x_variant = build_x_native_video(video_out, thumbnail.strip(), workdir)
+            print(f"X native variant: {x_variant}")
         scheduled_iso = None
         if schedule_input:
             timezone_name = args.timezone or detect_system_timezone()

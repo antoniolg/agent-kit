@@ -77,6 +77,32 @@ def resolve_group_integrations(group_name: str, postiz: dict) -> list[str]:
     return resolved
 
 
+def filter_out_x_integrations(integration_ids: list[str], postiz_cfg: dict) -> list[str]:
+    """
+    Always exclude X integrations for youtube_publish.
+    """
+    integrations_cfg = postiz_cfg.get("integrations", {})
+    if not isinstance(integrations_cfg, dict):
+        return integration_ids
+
+    known_x_ids = set()
+    for key, value in integrations_cfg.items():
+        if isinstance(value, dict):
+            network = str(value.get("network", "")).strip().lower()
+            integration_id = str(value.get("id", "")).strip()
+            if network == "x" and integration_id:
+                known_x_ids.add(integration_id)
+        if isinstance(key, str) and key.lower().startswith("x"):
+            if isinstance(value, dict):
+                integration_id = str(value.get("id", "")).strip()
+                if integration_id:
+                    known_x_ids.add(integration_id)
+            elif isinstance(value, str) and value.strip():
+                known_x_ids.add(value.strip())
+
+    return [integration_id for integration_id in integration_ids if integration_id not in known_x_ids]
+
+
 def encode_underscores_in_url(url: str) -> str:
     """
     Some platforms (notably LinkedIn via Postiz) can mangle URLs that contain
@@ -116,6 +142,9 @@ def main():
             "Missing Postiz integrations (pass --integrations or set postiz.groups/postiz.integrations "
             "in ~/.config/skills/config.json)"
         )
+    integrations = filter_out_x_integrations(integrations, postiz_cfg)
+    if not integrations:
+        raise SystemExit("No social integrations left after excluding X.")
 
     text = open(args.text_file, "r", encoding="utf-8").read().strip()
     if "#" in text:

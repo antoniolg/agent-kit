@@ -284,9 +284,9 @@ def main():
             raise ValueError("Timezone is required for publish-at (pass --timezone or set config)")
         publish_at = parse_publish_at(args.publish_at, timezone_name)
 
-    privacy_status = args.privacy_status or config.get("privacy_status", "private")
-    if publish_at:
-        privacy_status = "private"
+    # Process rule: always end in private (or scheduled private if publish_at is set).
+    # We intentionally do not publish directly from this scripted flow.
+    privacy_status = "private"
 
     category_id = args.category_id or config.get("category_id") or "27"
     made_for_kids = bool(config.get("made_for_kids", False))
@@ -330,85 +330,58 @@ def main():
     youtube = get_authenticated_service(args.client_secret, args.token)
 
     needs_comment = bool(promo_comment)
-    needs_schedule = bool(publish_at)
-
     if args.update_video_id:
-        if needs_schedule and needs_comment:
-            temp_status = {
-                "privacyStatus": "unlisted",
-                "selfDeclaredMadeForKids": made_for_kids,
-            }
-            temp_body = {
-                "id": args.update_video_id,
-                "snippet": snippet,
-                "status": temp_status,
-            }
-            youtube.videos().update(part="snippet,status", body=temp_body).execute()
-            if args.thumbnail:
-                youtube.thumbnails().set(
-                    videoId=args.update_video_id,
-                    media_body=MediaFileUpload(args.thumbnail),
-                ).execute()
+        temp_status = {
+            "privacyStatus": "unlisted",
+            "selfDeclaredMadeForKids": made_for_kids,
+        }
+        temp_body = {
+            "id": args.update_video_id,
+            "snippet": snippet,
+            "status": temp_status,
+        }
+        youtube.videos().update(part="snippet,status", body=temp_body).execute()
+        if args.thumbnail:
+            youtube.thumbnails().set(
+                videoId=args.update_video_id,
+                media_body=MediaFileUpload(args.thumbnail),
+            ).execute()
+        if needs_comment:
             insert_promo_comment(youtube, args.update_video_id, promo_comment)
-            final_body = {
-                "id": args.update_video_id,
-                "snippet": snippet,
-                "status": status,
-            }
-            youtube.videos().update(part="snippet,status", body=final_body).execute()
-        else:
-            update_body = {
-                "id": args.update_video_id,
-                "snippet": snippet,
-                "status": status,
-            }
-            youtube.videos().update(part="snippet,status", body=update_body).execute()
-            if args.thumbnail:
-                youtube.thumbnails().set(
-                    videoId=args.update_video_id,
-                    media_body=MediaFileUpload(args.thumbnail),
-                ).execute()
-            if needs_comment:
-                insert_promo_comment(youtube, args.update_video_id, promo_comment)
+        final_body = {
+            "id": args.update_video_id,
+            "snippet": snippet,
+            "status": status,
+        }
+        youtube.videos().update(part="snippet,status", body=final_body).execute()
         print(f"Updated video id: {args.update_video_id}")
         if publish_at:
             print(f"Scheduled for: {publish_at} (UTC)")
     else:
-        if needs_schedule and needs_comment:
-            temp_status = {
-                "privacyStatus": "unlisted",
-                "selfDeclaredMadeForKids": made_for_kids,
-            }
-            temp_body = {
-                "snippet": snippet,
-                "status": temp_status,
-            }
-            video_id = upload_video(
-                youtube=youtube,
-                video_path=str(video_path),
-                body=temp_body,
-                thumbnail_path=args.thumbnail,
-                notify_subscribers=notify_subscribers,
-            )
-            persist_output_video_id(args.output_video_id, video_id)
+        temp_status = {
+            "privacyStatus": "unlisted",
+            "selfDeclaredMadeForKids": made_for_kids,
+        }
+        temp_body = {
+            "snippet": snippet,
+            "status": temp_status,
+        }
+        video_id = upload_video(
+            youtube=youtube,
+            video_path=str(video_path),
+            body=temp_body,
+            thumbnail_path=args.thumbnail,
+            notify_subscribers=notify_subscribers,
+        )
+        persist_output_video_id(args.output_video_id, video_id)
+        if needs_comment:
             insert_promo_comment(youtube, video_id, promo_comment)
-            final_body = {
-                "id": video_id,
-                "snippet": snippet,
-                "status": status,
-            }
-            youtube.videos().update(part="snippet,status", body=final_body).execute()
-        else:
-            video_id = upload_video(
-                youtube=youtube,
-                video_path=str(video_path),
-                body=body,
-                thumbnail_path=args.thumbnail,
-                notify_subscribers=notify_subscribers,
-            )
-            persist_output_video_id(args.output_video_id, video_id)
-            if needs_comment:
-                insert_promo_comment(youtube, video_id, promo_comment)
+        final_body = {
+            "id": video_id,
+            "snippet": snippet,
+            "status": status,
+        }
+        youtube.videos().update(part="snippet,status", body=final_body).execute()
 
         updated_description = strip_self_video_url(description, video_id)
         if updated_description != description:
