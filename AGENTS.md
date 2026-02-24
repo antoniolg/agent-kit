@@ -66,7 +66,7 @@ Antonio owns this.
 
 ## Git
 
-- Safe by default: `git status/diff/log`. Push only when user asks.
+- Safe by default: `git status/diff/log`.
 - `git checkout` ok for PR review / explicit request.
 - Branch changes require user consent.
 - Destructive ops forbidden unless explicit (`reset --hard`, `clean`, `restore`, `rm`, …).
