@@ -20,6 +20,7 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 - **Comment Sequence:** For final publish/update, always use this order: set video to `unlisted`, insert promo comment (`Domina la IA...`), then set final status (`private` with `publishAt` if scheduled, otherwise `private`).
 - **Schedule Decision Required:** Never publish without an explicit decision in `Programación (final)`: either a date `YYYY-MM-DD HH:MM` or `private`.
 - **Timing:** Schedule social posts 15 minutes after the YouTube publish time.
+- **Audio Consistency:** `prepare_video.py` runs audio normalization in `auto` mode by default. It analyzes LUFS/true peak/LRA and only re-encodes audio when out of target.
 
 ---
 
@@ -41,6 +42,10 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      ```bash
      python scripts/prepare_video.py --videos /path/v1.mp4 [/path/v2.mp4 ...]
      ```
+   - Audio behavior (default): `--audio-normalization auto` targets `-14 LUFS`, `-1 dBTP`, and max `LRA 9`; it skips normalization when already in range.
+   - Optional:
+     - `--audio-normalization always` to force normalization.
+     - `--audio-normalization off` to skip analysis and normalization.
    - Output JSON with `workdir`, `video`, `slug`.
 
 2. **Upload draft (private)**
