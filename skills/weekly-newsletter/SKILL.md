@@ -279,12 +279,34 @@ Después de programar la newsletter en Listmonk, ofrece a Antonio generar una ve
 Si acepta:
 1. Toma el contenido de la newsletter ya aprobada
 2. Conviértelo a HTML limpio (sin estilos inline de email, sin tablas de layout)
-3. Usa tags semánticos: `<h2>`, `<p>`, `<a>`, `<strong>`, `<blockquote>`, `<hr>`
-4. Elimina el CTA de AI Expert (de momento, para medir si el contenido funciona por sí solo)
-5. Elimina el saludo "¡Hola DevExpert!" y el cierre "Un abrazo, Antonio"
-6. Guarda el fichero HTML en `~/Documents/aipal/newsletter-html/YYYY-MM-DD.html`
-7. Genera una imagen de portada para el artículo en formato 2:1 (por ejemplo 1200x600) usando el skill nano-banana-pro, con un diseño relacionado con el tema principal de la newsletter. Guarda la imagen en `~/Documents/aipal/newsletter-html/YYYY-MM-DD-cover.png`
-8. Envía el HTML como documento y la imagen por Telegram para que pueda copiar y pegar en el editor de X Articles
+3. Propón un **título llamativo** para X (evitar títulos genéricos tipo "Newsletter semanal..."). Debe despertar curiosidad y dejar claro el beneficio en 1 frase.
+4. Inserta ese título como `<h1>` al inicio del HTML.
+5. Usa tags semánticos: `<h1>`, `<h2>`, `<p>`, `<a>`, `<strong>`, `<blockquote>`, `<hr>`
+6. Para enlaces a posts de X (`x.com`), muestra la URL en texto claro dentro del contenido (no solo ancla), para poder copiar/pegar e integrar el post fácilmente en X Articles.
+7. Elimina el CTA de AI Expert (de momento, para medir si el contenido funciona por sí solo)
+8. Elimina el saludo "¡Hola DevExpert!" y el cierre "Un abrazo, Antonio"
+9. Guarda el fichero HTML en `~/Documents/aipal/newsletter-html/YYYY-MM-DD.html`
+10. Genera una imagen de portada para el artículo en formato **5:2** (por ejemplo 1500x600 o 2000x800) usando el skill nano-banana-pro, con un diseño llamativo y relacionado con el tema principal de la newsletter (que no parezca una portada genérica). Guarda la imagen en `~/Documents/aipal/newsletter-html/YYYY-MM-DD-cover.png`
+11. Envía por Telegram: título sugerido + HTML como documento + imagen, para que Antonio pueda pegarlo en X Articles
+
+## Registro en el vault (paso final obligatorio)
+
+Al finalizar (después de crear el borrador en Listmonk), añadir una entrada al fichero `~/Documents/aipal/10-areas/contenido/learnings.md`. Si el fichero no existe, crearlo.
+
+**Formato del bloque a añadir** (append, nunca truncar):
+
+```markdown
+## YYYY-MM-DD — Newsletter semanal
+
+- **Tema central**: [título o descripción del tema dominante, o "variada" si no hubo uno]
+- **Estructura usada**: A (con tema dominante) / B (variada)
+- **Secciones incluidas**: [lista: vídeo semana, tema semana, lo que pasó, lecturas recomendadas, novedades modelos, reflexión…]
+- **Contenido propio destacado**: [títulos de posts propios más relevantes de la semana]
+- **Bookmarks incluidos**: [número y temáticas]
+- **Campana Listmonk ID**: [id]
+```
+
+Este registro permite que futuras sesiones conozcan el historial de newsletters sin necesidad de consultarlo manualmente.
 
 ## Notas
 
