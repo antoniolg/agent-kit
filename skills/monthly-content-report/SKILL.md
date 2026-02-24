@@ -103,6 +103,27 @@ node scripts/thrivecart-sales.js --start YYYY-MM-DD --end YYYY-MM-DD --json
 
 6. **Enviar** resumen compacto por Telegram
 
+## Registro en el vault (paso final obligatorio)
+
+Después de guardar el informe completo en `~/Documents/aipal/reports/monthly-content-report/YYYY-MM.md`, añadir una entrada al fichero `~/Documents/aipal/10-areas/contenido/learnings.md`. Si el fichero no existe, crearlo.
+
+**Formato del bloque a añadir** (append, nunca truncar):
+
+```markdown
+## YYYY-MM — Informe mensual
+
+- **Ventas**: X unidades / €X.XXX
+- **Visitas /cursos/expert/ai**: X pageviews
+- **Posts publicados**: X
+- **Top posts por correlación con ventas**: [títulos o fragmentos]
+- **Patrón detectado**: [breve descripción del patrón contenido→ventas más claro del mes]
+- **Temáticas con mejor rendimiento**: [lista]
+- **Temáticas con peor rendimiento**: [lista]
+- **Informe completo**: `reports/monthly-content-report/YYYY-MM.md`
+```
+
+Este registro permite que futuras sesiones (y otras skills como weekly-newsletter) conozcan qué contenido convierte sin necesidad de releer el informe completo.
+
 ## Notas importantes
 
 - Umami auth con `path=eq.%2Fcursos%2Fexpert%2Fai` (formato URL de Umami v2+, NO `url=` ni `filters=`)
