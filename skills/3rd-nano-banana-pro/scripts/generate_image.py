@@ -7,7 +7,7 @@
 # ]
 # ///
 """
-Generate images using Google's Nano Banana Pro (Gemini 3 Pro Image) API.
+Generate images using Google's Nano Banana Pro (Gemini 3.1 Flash Image) API.
 
 Usage:
     uv run generate_image.py --prompt "your image description" --filename "output.png" [--resolution 1K|2K|4K] [--api-key KEY]
@@ -28,7 +28,7 @@ def get_api_key(provided_key: str | None) -> str | None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate images using Nano Banana Pro (Gemini 3 Pro Image)"
+        description="Generate images using Nano Banana Pro (Gemini 3.1 Flash Image)"
     )
     parser.add_argument(
         "--prompt", "-p",
@@ -53,8 +53,8 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="models/gemini-3-pro-image-preview",
-        help="Model name (default: models/gemini-3-pro-image-preview)"
+        default="models/gemini-3.1-flash-image-preview",
+        help="Model name (default: models/gemini-3.1-flash-image-preview)"
     )
     parser.add_argument(
         "--api-key", "-k",
