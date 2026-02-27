@@ -9,12 +9,15 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 
 ## Behavior rules for the agent
 
-- **Tone & Authority:** Strictly avoid clickbait terms ("Fácil", "Rápido", "Secreto"). Titles and copy must focus on engineering, architecture, and solving developer friction.
+- **Tone & Authority:** Titles and copy must focus on engineering, architecture, and solving developer friction. Avoid reaction-style hype and mass-content phrasing.
+- **Title Blacklist (strict):** Forbidden in titles: `RIP`, `Increíble`, `Brutal`, `Locura`, `Definitivo`, `¿El fin de...?`, and crown/fire emojis.
+- **Technical Anchor (strict):** Every title must include at least one engineering keyword: `Orquestación`, `Despliegue`, `Infraestructura`, `Clean Architecture`, `Refactorización`, `Pipeline`, `Capa de Abstracción`.
 - **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
 - **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
 - **Thumbnail Generation:** Generate 3 thumbnails by default using all three Antonio photo references (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
 - **Thumbnail Creativity Rule:** Deliver 1 safer option + 2 exploratory options. Avoid producing near-duplicates. If an unconventional concept communicates better for that specific video, prioritize it.
-- **Workflow:** Upload a private draft before generating copy so the video URL can be used in newsletter/social text.
+- **Workflow:** Upload a private draft before generating copy so the video URL can be used in social text.
+- **Newsletter:** Disabled in this flow. Do not generate or schedule newsletter here.
 - **X Strategy:** Do not schedule/publish to X via Postiz in this flow. X is handled as native video upload outside this step.
 - **Links:** In social posts, the comment must not be just the link; it must include a brief descriptive text inviting to watch (e.g., "Watch the full technical analysis here: https://...").
 - **Comment Sequence:** For final publish/update, always use this order: set video to `unlisted`, insert promo comment (`Domina la IA...`), then set final status (`private` with `publishAt` if scheduled, otherwise `private`).
@@ -29,7 +32,9 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 ### LinkedIn Post Style
 
 - **Length/Format**: 600–900 characters, 3–6 short paragraphs, 1–2 emojis.
-- **Strategy**: 1 central idea focused on technical authority. No digressions.
+- **Strategy (Signal vs Noise):** Start with a principle or real engineering problem, not with "new video" framing.
+- **Identity:** Keep the tone of technical authority. Fewer creator-marketing phrases, more architecture conclusions and tradeoffs.
+- **Scope:** 1 central idea focused on technical authority. No digressions.
 - **Closing**: Final line “Link en el primer comentario.” followed by a short question or CTA.
 - **Restrictions**: No hashtags.
 
@@ -75,6 +80,7 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      - Chapters (MM:SS).
      - LinkedIn post (per rules).
      - Save into `<workdir>/content.md`.
+   - Title quality gate: reject title candidates that break blacklist or technical-anchor rules.
 
 5. **Generate 3 thumbnails (Gemini image)**
    - Always include all three Antonio’s photo context. Create 3 images into `<workdir>/thumb-1.png`, `thumb-2.png`, `thumb-3.png`.

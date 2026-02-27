@@ -28,8 +28,29 @@ DEFAULT_OUTPUT_DIR = os.path.expanduser("~/Downloads/youtube-videos")
 DEFAULT_TEXT_MODEL = "models/gemini-2.0-flash"
 DEFAULT_IMAGE_MODEL = "models/gemini-3-pro-image-preview"
 
-PROMPT_TEMPLATE = """Eres un experto en títulos y thumbnails para YouTube (audiencia técnica).\n\nReglas obligatorias:\n- Evita clickbait: no uses 'Fácil', 'Rápido', 'Secreto'.\n- Enfócate en ingeniería, arquitectura y resolver fricción de desarrolladores.\n- Usa español.\n- Genera exactamente 3 títulos.\n- Genera exactamente 3 ideas de thumbnails.\n\nReglas de thumbnails:\n- Mantén dos anclas no negociables:\n  1) texto blanco, masivo, bold (<=4 palabras)\n  2) look cinematográfico dark con acentos cyan/magenta.\n- El resto es libre: composición, artefacto técnico, escenario y encuadre deben responder a la narrativa del vídeo.\n- Entrega 1 opción segura + 2 opciones exploratorias.\n- Evita miniaturas casi iguales entre sí; no repitas la misma composición en las 3.\n- Usa el contexto de foto de Antonio: assets/antonio-1.png, assets/antonio-2.png, assets/antonio-3.png.\n- Cada thumbnail debe usar una foto distinta.\n\nDevuelve SOLO JSON con esta forma exacta:\n{{\n  \"titles\": [\"...\", \"...\", \"...\"],\n  \"thumbnails\": [\n    {{\"photo\": \"assets/antonio-1.png\", \"text\": \"...\", \"artifact\": \"...\", \"concept\": \"...\"}},\n    {{\"photo\": \"assets/antonio-2.png\", \"text\": \"...\", \"artifact\": \"...\", \"concept\": \"...\"}},\n    {{\"photo\": \"assets/antonio-3.png\", \"text\": \"...\", \"artifact\": \"...\", \"concept\": \"...\"}}\n  ]\n}}\n\nEntrada:\nTITULO ACTUAL: {title}\nDESCRIPCION:\n{description}\n"""
+PROMPT_TEMPLATE = """Eres un estratega de contenido técnico para YouTube (audiencia senior de ingeniería).\n\nReglas obligatorias de títulos:\n- Usa español.\n- Genera exactamente 3 títulos.\n- Deben sonar técnicos, no de entretenimiento masivo.\n- Blacklist estricta (prohibido): RIP, Increíble, Brutal, Locura, Definitivo, ¿El fin de...?, 👑, 🔥.\n- Cada título debe contener al menos UNA palabra clave técnica: Orquestación, Despliegue, Infraestructura, Clean Architecture, Refactorización, Pipeline, Capa de Abstracción.\n\nReglas de thumbnails:\n- Mantén dos anclas no negociables:\n  1) texto blanco, masivo, bold (<=4 palabras)\n  2) look cinematográfico dark con acentos cyan/magenta.\n- El resto es libre: composición, artefacto técnico, escenario y encuadre deben responder a la narrativa del vídeo.\n- Entrega 1 opción segura + 2 opciones exploratorias.\n- Evita miniaturas casi iguales entre sí; no repitas la misma composición en las 3.\n- Usa el contexto de foto de Antonio: assets/antonio-1.png, assets/antonio-2.png, assets/antonio-3.png.\n- Cada thumbnail debe usar una foto distinta.\n\nDevuelve SOLO JSON con esta forma exacta:\n{{\n  \"titles\": [\"...\", \"...\", \"...\"],\n  \"thumbnails\": [\n    {{\"photo\": \"assets/antonio-1.png\", \"text\": \"...\", \"artifact\": \"...\", \"concept\": \"...\"}},\n    {{\"photo\": \"assets/antonio-2.png\", \"text\": \"...\", \"artifact\": \"...\", \"concept\": \"...\"}},\n    {{\"photo\": \"assets/antonio-3.png\", \"text\": \"...\", \"artifact\": \"...\", \"concept\": \"...\"}}\n  ]\n}}\n\nEntrada:\nTITULO ACTUAL: {title}\nDESCRIPCION:\n{description}\n"""
 
+TITLE_BLACKLIST_TERMS = (
+    "rip",
+    "increíble",
+    "incredible",
+    "brutal",
+    "locura",
+    "definitivo",
+    "el fin de",
+    "👑",
+    "🔥",
+)
+
+TITLE_TECH_KEYWORDS = (
+    "orquestación",
+    "despliegue",
+    "infraestructura",
+    "clean architecture",
+    "refactorización",
+    "pipeline",
+    "capa de abstracción",
+)
 
 def get_authenticated_service(client_secret_path: str, token_path: str):
     creds = None
@@ -124,10 +145,62 @@ def word_count(text: str) -> int:
 def normalize_thumb_text(text: str) -> str:
     # Keep it short and avoid obvious clickbait terms.
     cleaned = (text or "").strip()
+    cleaned = cleaned.replace("\n", " ")
+    cleaned = re.sub(r"[|/\\]+", " ", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
     banned = {"facil", "fácil", "rapido", "rápido", "secreto"}
     words = [w for w in cleaned.split(" ") if w.lower() not in banned]
     return " ".join(words[:4]).strip()
+
+
+def title_has_blacklisted_terms(title: str) -> bool:
+    low = (title or "").strip().lower()
+    if not low:
+        return True
+    return any(term in low for term in TITLE_BLACKLIST_TERMS)
+
+
+def title_has_tech_keyword(title: str) -> bool:
+    low = (title or "").strip().lower()
+    return any(keyword in low for keyword in TITLE_TECH_KEYWORDS)
+
+
+def enforce_title_rules(titles: list[str], fallback_title: str) -> list[str]:
+    valid: list[str] = []
+    seen: set[str] = set()
+
+    for raw in titles:
+        candidate = re.sub(r"\s+", " ", (raw or "").strip())
+        if not candidate:
+            continue
+        if title_has_blacklisted_terms(candidate):
+            continue
+        if not title_has_tech_keyword(candidate):
+            candidate = f"{candidate} | Orquestación"
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        valid.append(candidate)
+        if len(valid) == 3:
+            return valid
+
+    fallback_base = re.sub(r"\s+", " ", (fallback_title or "").strip()) or "Arquitectura de agentes"
+    fallback_pool = [
+        f"Orquestación de Agentes: {fallback_base}",
+        f"Pipeline e Infraestructura: {fallback_base}",
+        f"Refactorización y Clean Architecture: {fallback_base}",
+    ]
+    for candidate in fallback_pool:
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        valid.append(candidate)
+        if len(valid) == 3:
+            break
+
+    return valid[:3]
 
 
 def generate_ideas(
@@ -462,7 +535,8 @@ def main() -> int:
         if payload is not None:
             try:
                 titles, thumbnails = parse_titles_and_thumbs_payload(payload)
-                titles_text = "\n".join([f"{idx + 1}. {t}" for idx, t in enumerate(titles)])
+                enforced_titles = enforce_title_rules(titles, fallback_title=title)
+                titles_text = "\n".join([f"{idx + 1}. {t}" for idx, t in enumerate(enforced_titles)])
                 write_text(video_dir / "titles.txt", titles_text)
 
                 lines = []
@@ -481,9 +555,24 @@ def main() -> int:
             if payload is None:
                 payload = {
                     "thumbnails": [
-                        {"photo": "assets/antonio-1.png", "text": "Arquitectura IA", "artifact": "diagram", "concept": "technical nodes/diagram"},
-                        {"photo": "assets/antonio-2.png", "text": "MCP Toolkit", "artifact": "docker+mcp", "concept": "docker + MCP icons"},
-                        {"photo": "assets/antonio-3.png", "text": "Dev Workflow", "artifact": "code", "concept": "code snippet + terminal"},
+                        {
+                            "photo": "assets/antonio-1.png",
+                            "text": "Arquitectura IA",
+                            "artifact": "diagram",
+                            "concept": "technical nodes/diagram",
+                        },
+                        {
+                            "photo": "assets/antonio-2.png",
+                            "text": "MCP Pipeline",
+                            "artifact": "docker+mcp",
+                            "concept": "docker + MCP icons",
+                        },
+                        {
+                            "photo": "assets/antonio-3.png",
+                            "text": "Infraestructura Local",
+                            "artifact": "code",
+                            "concept": "code snippet + terminal",
+                        },
                     ]
                 }
 

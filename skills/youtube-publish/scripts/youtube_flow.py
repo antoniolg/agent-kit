@@ -175,30 +175,23 @@ def generate_content_md(srt_text, workdir: Path, title_hint: str, video_url: str
         "- 3 ideas de thumbnails (texto corto)\n"
         "- Descripción (1-2 párrafos)\n"
         "- Capítulos con timestamps reales (formato MM:SS Título). 10-12 capítulos. No redondees.\n"
-        "- Post LinkedIn (optimizado para LinkedIn, conversacional)\n"
-        "- Newsletter (tono cercano, 220-320 palabras, CTA a comentar en el vídeo)\n\n"
-        "Newsletter estructura:\n"
-        "1) Saludo fijo: \"¡Hola DevExpert!\" + contexto personal breve (1-2 frases)\n"
-        "2) Desarrollo con 2-3 párrafos (qué probé, qué aprendí, por qué importa)\n"
-        "3) 'En el vídeo verás:' + 2-4 bullets\n"
-        "4) Línea con enlace en Markdown al vídeo (ej: [Ver el vídeo](URL))\n"
-        "5) Cierre cercano + CTA: deja tu opinión en los comentarios del vídeo\n"
-        "6) Despedida exacta con salto de línea: \"Un abrazo,\" luego línea en blanco y \"Antonio.\"\n"
-        "7) P.D. opcional (1 frase)\n"
-        "Incluye al inicio de la newsletter:\n"
-        "- Asunto (sin prefijo, se añadirá automáticamente): ...\n"
-        "Varía la apertura y el ritmo; evita plantillas repetitivas.\n"
-        "Incluye el enlace del vídeo en la newsletter.\n"
+        "- Post LinkedIn (optimizado para LinkedIn, conversacional)\n\n"
+        "Reglas de títulos:\n"
+        "- Evita tono de reacción o hype masivo.\n"
+        "- Prohibido usar: RIP, Increíble, Brutal, Locura, Definitivo, ¿El fin de...?, 👑, 🔥.\n"
+        "- Cada título debe incluir al menos una palabra técnica: Orquestación, Despliegue, Infraestructura, Clean Architecture, Refactorización, Pipeline, Capa de Abstracción.\n\n"
         "Post LinkedIn reglas:\n"
         "- 600–900 caracteres, 3–6 párrafos cortos, 1–2 emojis\n"
+        "- Arranca con principio técnico o problema real de ingeniería (no con anuncio del vídeo)\n"
         "- 1 idea central, sin desviarse\n"
         "- Línea final: “Link en el primer comentario.”\n"
         "- Cierre con pregunta breve o CTA a comentar\n"
+        "- Menos tono creator-marketing; más conclusiones y tradeoffs técnicos\n"
         "- Sin hashtags\n"
         "En redes, indica que el enlace estará en el primer comentario (no pongas la URL ahí).\n"
         "Reglas: no inventes; usa tokens exactos: ClawdBot, justdoit, MCP, Gemini, Google Places, WhatsApp, Telegram, Gmail, Google Sheets, Google Drive, X.\n"
         "Salida: Markdown con encabezados exactamente: \n"
-        "## Títulos\n## Ideas de thumbnails\n## Descripción\n## Capítulos\n## LinkedIn\n## Newsletter\n"
+        "## Títulos\n## Ideas de thumbnails\n## Descripción\n## Capítulos\n## LinkedIn\n"
     )
     if video_url:
         prompt = f"Enlace del vídeo: {video_url}\n\n" + prompt
@@ -217,10 +210,6 @@ def generate_content_md(srt_text, workdir: Path, title_hint: str, video_url: str
 ## Capítulos (final)
 
 ## Post LinkedIn (final)
-
-## Newsletter (final)
-
-## Asunto newsletter (final)
 
 ## Thumbnail (final)
 
@@ -258,8 +247,6 @@ def validate_final_content(md_text: str, workdir: Path, require_thumbnail: bool)
         ("Descripción (final)", "description"),
         ("Capítulos (final)", "chapters"),
         ("Post LinkedIn (final)", "linkedin"),
-        ("Newsletter (final)", "newsletter"),
-        ("Asunto newsletter (final)", "subject"),
     ]
 
     errors = []
@@ -469,17 +456,11 @@ def main():
 
         if scheduled_iso:
             linkedin_text = extract_section(md, "Post LinkedIn (final)")
-            subject = extract_section(md, "Asunto newsletter (final)")
-            newsletter = extract_section(md, "Newsletter (final)")
-
-            if not linkedin_text or not subject or not newsletter:
-                raise RuntimeError("Missing LinkedIn/Newsletter sections for scheduling")
+            if not linkedin_text:
+                raise RuntimeError("Missing LinkedIn section for scheduling")
 
             linkedin_path = workdir / "linkedin.final.txt"
             linkedin_path.write_text(linkedin_text.strip(), encoding="utf-8")
-
-            newsletter_path = workdir / "newsletter.final.md"
-            newsletter_path.write_text(newsletter.strip(), encoding="utf-8")
 
             social_cmd = [
                 sys.executable,
@@ -490,21 +471,6 @@ def main():
                 scheduled_iso,
             ]
             run(social_cmd)
-
-            campaign_name = f"YouTube: {title.strip()}"
-            news_cmd = [
-                sys.executable,
-                str(Path(__file__).parent / "schedule_newsletter.py"),
-                "--name",
-                campaign_name,
-                "--subject",
-                subject.strip(),
-                "--body-file",
-                str(newsletter_path),
-                "--send-at",
-                scheduled_iso,
-            ]
-            run(news_cmd)
 
     print(f"Workdir: {workdir}")
     print(f"Final video: {video_out}")
