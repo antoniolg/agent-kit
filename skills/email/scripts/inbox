@@ -8,11 +8,13 @@ import subprocess
 from email.header import decode_header
 from email.utils import parseaddr
 from getpass import getpass
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 ICLOUD_HOST = "imap.mail.me.com"
 ICLOUD_PORT = 993
 SKILLS_CONFIG_PATH = os.path.expanduser("~/.config/skills/config.json")
+INDEX_STATE_PATH = Path(os.path.expanduser("~/.cache/aipal/email-index-state.json"))
 
 
 def decode_header_value(value: str) -> str:
@@ -132,6 +134,71 @@ def get_email_config() -> Tuple[List[str], Optional[str]]:
     return gmail_accounts, icloud_user
 
 
+def item_key(item: dict) -> str:
+    return f"{item.get('source', '')}::{item.get('account', '')}::{item.get('id', '')}"
+
+
+def load_index_state() -> Tuple[int, dict]:
+    try:
+        with INDEX_STATE_PATH.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return 1, {}
+
+    if not isinstance(payload, dict):
+        return 1, {}
+
+    next_index = payload.get("next_index", 1)
+    if not isinstance(next_index, int) or next_index < 1:
+        next_index = 1
+
+    active = payload.get("active", {})
+    if not isinstance(active, dict):
+        active = {}
+
+    sanitized_active = {}
+    for key, idx in active.items():
+        if isinstance(key, str) and isinstance(idx, int) and idx > 0:
+            sanitized_active[key] = idx
+
+    return next_index, sanitized_active
+
+
+def save_index_state(next_index: int, active: dict) -> None:
+    if next_index < 1:
+        next_index = 1
+
+    INDEX_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "next_index": next_index,
+        "active": active,
+    }
+    with INDEX_STATE_PATH.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+def assign_stable_indices(items: List[dict]) -> List[dict]:
+    next_index, previous_active = load_index_state()
+    current_active = {}
+    indexed_items = []
+
+    for item in items:
+        key = item_key(item)
+        index = previous_active.get(key)
+        if not isinstance(index, int) or index < 1:
+            index = next_index
+            next_index += 1
+
+        current_active[key] = index
+        indexed_items.append({"index": index, **item})
+
+    if not current_active:
+        next_index = 1
+
+    save_index_state(next_index, current_active)
+    return indexed_items
+
+
 def main():
     parser = argparse.ArgumentParser(description="Show inbox items for configured accounts")
     parser.add_argument("--max-gmail", type=int, default=20)
@@ -155,33 +222,39 @@ def main():
         if not icloud_pass:
             icloud_pass = getpass(f"iCloud app password for {icloud_user}: ")
 
-    counter = 1
-    all_items = []
+    sections = []
+    ordered_items = []
 
-    for i, account in enumerate(gmail_accounts):
+    for account in gmail_accounts:
+        items = run_gog(account, args.max_gmail)
+        sections.append((account, items))
+        ordered_items.extend(items)
+
+    if icloud_user:
+        icloud_items = run_icloud(icloud_user, icloud_pass, args.max_icloud)
+        sections.append((icloud_user, icloud_items))
+        ordered_items.extend(icloud_items)
+
+    indexed_ordered_items = assign_stable_indices(ordered_items)
+
+    all_items = []
+    cursor = 0
+    for i, (account, items) in enumerate(sections):
         if i > 0:
             print("")
         print(account)
-        items = run_gog(account, args.max_gmail)
+
         if not items:
             print("- sin resultados")
             continue
-        for item in items:
-            print(f"{counter}) {item['from']} - \"{item['subject']}\"")
-            all_items.append({"index": counter, **item})
-            counter += 1
 
-    if icloud_user:
-        print("")
-        print(icloud_user)
-        icloud_items = run_icloud(icloud_user, icloud_pass, args.max_icloud)
-        if not icloud_items:
-            print("- sin resultados")
-        else:
-            for item in icloud_items:
-                print(f"{counter}) {item['from']} - \"{item['subject']}\"")
-                all_items.append({"index": counter, **item})
-                counter += 1
+        count = len(items)
+        indexed_items = indexed_ordered_items[cursor : cursor + count]
+        cursor += count
+        all_items.extend(indexed_items)
+
+        for item in indexed_items:
+            print(f"{item['index']}) {item['from']} - \"{item['subject']}\"")
 
     if args.json_out:
         with open(args.json_out, "w", encoding="utf-8") as f:
