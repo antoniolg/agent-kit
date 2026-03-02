@@ -11,9 +11,14 @@ Generate new images or edit existing ones using Google's Nano Banana Pro API (Ge
 
 Run the script using the skill's base directory (provided when the skill loads):
 
-**Generate new image:**
+**Generate new image (Flash, default):**
 ```bash
 uv run /scripts/generate_image.py --prompt "your image description" --filename "output-name.png" [--resolution 1K|2K|4K] [--api-key KEY]
+```
+
+**Generate with Pro model (higher quality, slower):**
+```bash
+uv run /scripts/generate_image.py --prompt "your image description" --filename "output-name.png" --pro [--resolution 1K|2K|4K]
 ```
 
 **Edit existing image:**

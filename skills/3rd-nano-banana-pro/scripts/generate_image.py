@@ -53,8 +53,13 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="models/gemini-3.1-flash-image-preview",
-        help="Model name (default: models/gemini-3.1-flash-image-preview)"
+        default=None,
+        help="Model name (overrides --pro flag if set)"
+    )
+    parser.add_argument(
+        "--pro",
+        action="store_true",
+        help="Use Gemini 3 Pro Image model (models/gemini-3-pro-image-preview) instead of Flash"
     )
     parser.add_argument(
         "--api-key", "-k",
@@ -62,6 +67,10 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Resolve model
+    if args.model is None:
+        args.model = "models/gemini-3-pro-image-preview" if args.pro else "models/gemini-3.1-flash-image-preview"
 
     # Get API key
     api_key = get_api_key(args.api_key)
