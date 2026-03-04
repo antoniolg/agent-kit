@@ -8,26 +8,40 @@ from urllib.parse import urlsplit, urlunsplit
 SKILLS_CONFIG_PATH = os.path.expanduser("~/.config/skills/config.json")
 
 
-def run(cmd):
+def run(cmd: list[str]) -> str:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{result.stderr}")
     return result.stdout.strip()
 
 
-def upload_image(path):
+def detect_media_kind(path: str) -> str:
+    ext = os.path.splitext(path)[1].lower()
+    if ext in {".mp4", ".mov", ".mkv", ".webm"}:
+        return "video"
+    return "image"
+
+
+def upload_media(path: str) -> str | None:
     if not path:
         return None
-    raw = run(["postiz", "upload", "--file-path", path])
+    raw = run(
+        [
+            "postflow",
+            "--json",
+            "media",
+            "upload",
+            "--file",
+            path,
+            "--kind",
+            detect_media_kind(path),
+        ]
+    )
     data = json.loads(raw)
-    for key in ["url", "public_url", "publicUrl", "path"]:
-        if key in data:
-            return data[key]
-    if "file" in data:
-        file_obj = data["file"]
-        for key in ["url", "public_url", "publicUrl", "path"]:
-            if key in file_obj:
-                return file_obj[key]
+    if isinstance(data, dict):
+        media_id = data.get("id")
+        if isinstance(media_id, str) and media_id:
+            return media_id
     return None
 
 
@@ -42,70 +56,117 @@ def load_skills_config() -> dict:
         return {}
 
 
-def parse_integrations(raw: str) -> list[str]:
+def parse_csv(raw: str) -> list[str]:
     if not raw:
         return []
     parts = [p.strip() for p in raw.split(",")]
     return [p for p in parts if p]
 
 
-def resolve_integration_id(key: str, integrations: dict) -> str | None:
-    if key in integrations:
-        value = integrations.get(key)
+def load_connected_accounts() -> list[dict]:
+    raw = run(["postflow", "--json", "accounts", "list"])
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        return []
+    items = data.get("items", [])
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def build_platform_map(accounts: list[dict]) -> dict[str, list[str]]:
+    platform_map: dict[str, list[str]] = {}
+    for item in accounts:
+        account_id = str(item.get("id", "")).strip()
+        platform = str(item.get("platform", "")).strip().lower()
+        status = str(item.get("status", "connected")).strip().lower()
+        if not account_id or not platform or status != "connected":
+            continue
+        if platform not in platform_map:
+            platform_map[platform] = []
+        platform_map[platform].append(account_id)
+    return platform_map
+
+
+def resolve_account_id(key: str, accounts_cfg: dict, platform_map: dict[str, list[str]]) -> str | None:
+    if key in accounts_cfg:
+        value = accounts_cfg.get(key)
         if isinstance(value, dict):
             return value.get("id") or None
         if isinstance(value, str):
             return value
-    return key or None
+    if key.startswith("acc_"):
+        return key
+    alias = key.split("-")[0].strip().lower()
+    candidates = platform_map.get(alias, [])
+    if candidates:
+        return candidates[0]
+    return None
 
 
-def resolve_group_integrations(group_name: str, postiz: dict) -> list[str]:
-    groups = postiz.get("groups", {})
+def unique(values: list[str]) -> list[str]:
+    seen = set()
+    out = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def resolve_account_list(raw_items: list[str], accounts_cfg: dict, platform_map: dict[str, list[str]]) -> list[str]:
+    resolved = []
+    for item in raw_items:
+        key = item.strip()
+        if not key:
+            continue
+        account_id = resolve_account_id(key, accounts_cfg, platform_map)
+        if account_id:
+            resolved.append(account_id)
+    return unique(resolved)
+
+
+def resolve_group_accounts(group_name: str, postflow_cfg: dict, platform_map: dict[str, list[str]]) -> list[str]:
+    groups = postflow_cfg.get("groups", {})
     if not isinstance(groups, dict):
-        return []
+        groups = {}
+
     group = groups.get(group_name, [])
     if not isinstance(group, list):
-        return []
-    integrations = postiz.get("integrations", {})
-    resolved = []
-    for item in group:
-        if not isinstance(item, str):
-            continue
-        integration_id = resolve_integration_id(item, integrations)
-        if integration_id:
-            resolved.append(integration_id)
-    return resolved
+        group = []
+
+    accounts_cfg = postflow_cfg.get("accounts", {})
+    if not isinstance(accounts_cfg, dict):
+        accounts_cfg = {}
+    return resolve_account_list(group, accounts_cfg, platform_map)
 
 
-def filter_out_x_integrations(integration_ids: list[str], postiz_cfg: dict) -> list[str]:
-    """
-    Always exclude X integrations for youtube_publish.
-    """
-    integrations_cfg = postiz_cfg.get("integrations", {})
-    if not isinstance(integrations_cfg, dict):
-        return integration_ids
+def filter_out_x_accounts(account_ids: list[str], postflow_cfg: dict, platform_map: dict[str, list[str]]) -> list[str]:
+    x_ids = set(platform_map.get("x", []))
 
-    known_x_ids = set()
-    for key, value in integrations_cfg.items():
-        if isinstance(value, dict):
-            network = str(value.get("network", "")).strip().lower()
-            integration_id = str(value.get("id", "")).strip()
-            if network == "x" and integration_id:
-                known_x_ids.add(integration_id)
-        if isinstance(key, str) and key.lower().startswith("x"):
+    accounts_cfg = postflow_cfg.get("accounts", {})
+    if isinstance(accounts_cfg, dict):
+        for key, value in accounts_cfg.items():
             if isinstance(value, dict):
-                integration_id = str(value.get("id", "")).strip()
-                if integration_id:
-                    known_x_ids.add(integration_id)
-            elif isinstance(value, str) and value.strip():
-                known_x_ids.add(value.strip())
+                platform = str(value.get("platform", "")).strip().lower()
+                account_id = str(value.get("id", "")).strip()
+                if platform == "x" and account_id:
+                    x_ids.add(account_id)
+            if isinstance(key, str) and key.lower().startswith("x"):
+                if isinstance(value, str) and value.strip():
+                    x_ids.add(value.strip())
+                if isinstance(value, dict):
+                    account_id = str(value.get("id", "")).strip()
+                    if account_id:
+                        x_ids.add(account_id)
 
-    return [integration_id for integration_id in integration_ids if integration_id not in known_x_ids]
+    return [account_id for account_id in unique(account_ids) if account_id not in x_ids]
 
 
 def encode_underscores_in_url(url: str) -> str:
     """
-    Some platforms (notably LinkedIn via Postiz) can mangle URLs that contain
+    Some platforms (notably LinkedIn) can mangle URLs that contain
     underscores (e.g. treat them as formatting markers). Percent-encoding
     underscores keeps the URL valid and avoids that formatting issue.
     """
@@ -117,61 +178,79 @@ def encode_underscores_in_url(url: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Schedule socials via Postiz CLI")
+    parser = argparse.ArgumentParser(description="Schedule socials via PostFlow CLI")
     parser.add_argument("--text-file", required=True, help="Path to post text")
     parser.add_argument("--scheduled-date", required=True, help="ISO 8601 datetime with offset")
     parser.add_argument("--comment-url", required=True, help="URL for first comment")
     parser.add_argument("--image", help="Thumbnail image path")
-    parser.add_argument("--integrations", help="Comma-separated Postiz integration IDs")
-    parser.add_argument("--group", help="Postiz group name from config (default: youtube_publish)")
+    parser.add_argument("--accounts", help="Comma-separated PostFlow account IDs or aliases")
+    parser.add_argument("--group", help="PostFlow group name from config (default: youtube_publish)")
     parser.add_argument("--comment-text", default="🎥 Tienes el vídeo completo y la explicación técnica aquí:", help="Text prefix for the comment link")
     args = parser.parse_args()
 
     skills_cfg = load_skills_config()
-    postiz_cfg = skills_cfg.get("postiz", {})
+    postflow_cfg = skills_cfg.get("postflow", {})
+    if not isinstance(postflow_cfg, dict):
+        postflow_cfg = {}
     yt_cfg = skills_cfg.get("youtube_publish", {})
-    group_name = args.group or yt_cfg.get("postiz_group") or "youtube_publish"
+    if not isinstance(yt_cfg, dict):
+        yt_cfg = {}
+    group_name = args.group or yt_cfg.get("postflow_group") or "youtube_publish"
 
-    integrations = parse_integrations(args.integrations)
-    if not integrations:
-        integrations = resolve_group_integrations(group_name, postiz_cfg)
-    if not integrations:
-        integrations = yt_cfg.get("postiz_integrations", [])
-    if not integrations:
+    connected_accounts = load_connected_accounts()
+    platform_map = build_platform_map(connected_accounts)
+    accounts_cfg = postflow_cfg.get("accounts", {})
+    if not isinstance(accounts_cfg, dict):
+        accounts_cfg = {}
+
+    accounts = resolve_account_list(parse_csv(args.accounts), accounts_cfg, platform_map)
+    if not accounts:
+        accounts = resolve_group_accounts(group_name, postflow_cfg, platform_map)
+    if not accounts:
+        raw_accounts = yt_cfg.get("postflow_accounts", [])
+        if isinstance(raw_accounts, list):
+            parsed = [str(item) for item in raw_accounts if isinstance(item, (str, int))]
+            accounts = resolve_account_list(parsed, accounts_cfg, platform_map)
+    if not accounts and platform_map:
+        all_connected = []
+        for ids in platform_map.values():
+            all_connected.extend(ids)
+        accounts = unique(all_connected)
+
+    if not accounts:
         raise SystemExit(
-            "Missing Postiz integrations (pass --integrations or set postiz.groups/postiz.integrations "
+            "Missing PostFlow accounts (pass --accounts or set postflow.groups/postflow.accounts "
             "in ~/.config/skills/config.json)"
         )
-    integrations = filter_out_x_integrations(integrations, postiz_cfg)
-    if not integrations:
-        raise SystemExit("No social integrations left after excluding X.")
+
+    accounts = filter_out_x_accounts(accounts, postflow_cfg, platform_map)
+    if not accounts:
+        raise SystemExit("No social accounts left after excluding X.")
 
     text = open(args.text_file, "r", encoding="utf-8").read().strip()
     if "#" in text:
         text = text.replace("#", "")
 
-    image_url = upload_image(args.image) if args.image else None
+    media_id = upload_media(args.image) if args.image else None
 
-    # Postiz CLI expects --content multiple times to build a thread.
     safe_comment_url = encode_underscores_in_url(args.comment_url)
     comment_content = f"{args.comment_text} {safe_comment_url}"
-    content_args = ["--content", text, "--content", comment_content]
+    segments_json = json.dumps([{"text": text}, {"text": comment_content}], ensure_ascii=False)
 
-    for integration_id in integrations:
+    for account_id in accounts:
         cmd = [
-            "postiz",
+            "postflow",
             "posts",
             "create",
-            *content_args,
-            "--integrations",
-            integration_id,
-            "--status",
-            "scheduled",
-            "--scheduled-date",
+            "--account-id",
+            account_id,
+            "--segments-json",
+            segments_json,
+            "--scheduled-at",
             args.scheduled_date,
         ]
-        if image_url:
-            cmd += ["--images", image_url]
+        if media_id:
+            cmd += ["--media-id", media_id]
         run(cmd)
 
     print("Scheduled socials.")

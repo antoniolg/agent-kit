@@ -1,6 +1,6 @@
 ---
 name: youtube-publish
-description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy+thumbnails with Gemini, update YouTube metadata, then schedule socials (Postiz) 15 minutes after publish."
+description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy+thumbnails with Gemini, update YouTube metadata, then schedule socials (PostFlow) 15 minutes after publish."
 ---
 
 # YouTube Publish (Scripted Flow)
@@ -14,11 +14,13 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 - **Technical Anchor (strict):** Every title must include at least one engineering keyword: `Orquestación`, `Despliegue`, `Infraestructura`, `Clean Architecture`, `Refactorización`, `Pipeline`, `Capa de Abstracción`.
 - **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
 - **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
-- **Thumbnail Generation:** Generate 3 thumbnails by default using all three Antonio photo references (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
+- **Thumbnail Generation:** Generate 3 thumbnails using the presenter photo set. Default presenter is `antonio` (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). If the user indicates the video is from Nino, switch presenter to `nino` (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
+- **Reference Photos (strict):** For each generated thumbnail, always pass the 3 presenter images together as references. They are identity anchors (not fixed poses); the model is free to choose the best posture/composition.
+- **Thumbnail Engine:** Reuse `3rd-nano-banana-pro/scripts/generate_image.py` as the single image generation engine. Keep default model behavior (Flash). Only override model explicitly when requested.
 - **Thumbnail Creativity Rule:** Deliver 1 safer option + 2 exploratory options. Avoid producing near-duplicates. If an unconventional concept communicates better for that specific video, prioritize it.
 - **Workflow:** Upload a private draft before generating copy so the video URL can be used in social text.
 - **Newsletter:** Disabled in this flow. Do not generate or schedule newsletter here.
-- **X Strategy:** Do not schedule/publish to X via Postiz in this flow. X is handled as native video upload outside this step.
+- **X Strategy:** Do not schedule/publish to X via PostFlow in this flow. X is handled as native video upload outside this step.
 - **Links:** In social posts, the comment must not be just the link; it must include a brief descriptive text inviting to watch (e.g., "Watch the full technical analysis here: https://...").
 - **Comment Sequence:** For final publish/update, always use this order: set video to `unlisted`, insert promo comment (`Domina la IA...`), then set final status (`private` with `publishAt` if scheduled, otherwise `private`).
 - **Schedule Decision Required:** Never publish without an explicit decision in `Programación (final)`: either a date `YYYY-MM-DD HH:MM` or `private`.
@@ -83,13 +85,17 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
    - Title quality gate: reject title candidates that break blacklist or technical-anchor rules.
 
 5. **Generate 3 thumbnails (Gemini image)**
-   - Always include all three Antonio’s photo context. Create 3 images into `<workdir>/thumb-1.png`, `thumb-2.png`, `thumb-3.png`.
+   - Use presenter photos according to context: by default `antonio`, and `nino` only when explicitly requested for a Nino video. Create 3 images into `<workdir>/thumb-1.png`, `thumb-2.png`, `thumb-3.png`.
    - Keep the two anchors fixed (massive white text + cinematic cyan/magenta look), but allow concept/composition/artifact/background to vary freely by story.
    - Target mix: 1 safe option + 2 exploratory options.
    - Example with multiple inputs:
      ```bash
      uv run /path/to/nano-banana-pro/scripts/generate_image.py --prompt "Antonio working..." --filename "thumb-1.png" --input-image assets/antonio-1.png assets/antonio-2.png assets/antonio-3.png
      ```
+   - If using helper scripts:
+     - Default: `python scripts/generate_titles_thumbs.py --presenter antonio ...`
+     - Nino video: `python scripts/generate_titles_thumbs.py --presenter nino ...`
+     - Optional override: `--image-model <model>` only if explicitly needed; otherwise keep the default model.
 
 6. **Stop to ask for validation of**:
     - Title (choose one of the 3 generated).
@@ -111,13 +117,13 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      ```
    - Result: a version ready for X where the first 500ms shows the selected thumbnail as a static cover frame.
 
-9. **Schedule socials (Postiz, excluding X)**
+9. **Schedule socials (PostFlow, excluding X)**
    - Command:
      ```bash
      python scripts/schedule_socials.py --text-file <linkedin.txt> --scheduled-date <ISO8601+offset> --comment-url <video_url> --image <thumb.png>
      ```
    - This script publishes to configured socials except X.
-   - Note: `schedule_socials.py` percent-encodes underscores in the `--comment-url` (e.g. `_` -> `%5F`) to avoid LinkedIn/Postiz URL formatting issues.
+   - Note: `schedule_socials.py` percent-encodes underscores in the `--comment-url` (e.g. `_` -> `%5F`) to avoid LinkedIn URL formatting issues.
 
 10. **Final Reminder**
    - Explicitly remind the user to go to YouTube Studio to:

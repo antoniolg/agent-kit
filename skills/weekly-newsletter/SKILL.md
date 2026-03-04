@@ -1,6 +1,6 @@
 ---
 name: weekly-newsletter
-description: "Genera la newsletter semanal de DevExpert recopilando contenido de X, YouTube, Postiz y bookmarks. Crea borrador en Listmonk para revisión."
+description: "Genera la newsletter semanal de DevExpert recopilando contenido de X, YouTube, PostFlow y bookmarks. Crea borrador en Listmonk para revisión."
 ---
 
 # Weekly Newsletter DevExpert
@@ -11,10 +11,16 @@ Genera la newsletter semanal recopilando todo el contenido publicado y programad
 
 - Una vez por semana, en el día/hora que defina el cron activo.
 - Rangos de contenido (agnóstico del día):
-  - **X (tweets propios + bookmarks), Postiz y YouTube**: últimos 7 días hasta el momento de ejecución.
+  - **X (tweets propios + bookmarks), PostFlow y YouTube**: últimos 7 días hasta el momento de ejecución.
   - Si hay una fecha/hora de corte indicada por el usuario, usar esa en lugar de la ventana de 7 días.
 
 ## Flujo de trabajo
+
+### Dependencia de Listmonk (importante)
+
+Para cualquier operación de Listmonk (listas, suscriptores, campañas, schedule, archive), usar como referencia principal la skill [listmonk-cli](../listmonk-cli/SKILL.md).
+
+Esta skill (`weekly-newsletter`) define el flujo editorial y el contenido; `listmonk-cli` es la referencia operativa del CLI.
 
 ### 1. Recopilar contenido de todas las fuentes
 
@@ -24,9 +30,9 @@ bird user-tweets antonioleivag -n 50 --json
 ```
 Filtrar por fechas del rango.
 
-**Postiz** (posts programados):
+**PostFlow** (posts programados):
 ```bash
-postiz posts list --start-date YYYY-MM-DD --end-date YYYY-MM-DD
+postflow --json schedule list --from YYYY-MM-DDTHH:MM:SSZ --to YYYY-MM-DDTHH:MM:SSZ
 ```
 
 **YouTube** (vídeos publicados o programados):
@@ -67,6 +73,8 @@ Listar el contenido dentro del rango que no se ha incluido en el bloque 1, para 
 El usuario revisa y ajusta antes de generar el borrador.
 
 ### 3. Crear borrador en Listmonk
+
+Antes de ejecutar comandos de Listmonk, consultar [listmonk-cli](../listmonk-cli/SKILL.md) si hay dudas de flags, formatos o troubleshooting.
 
 Escribir el contenido en un archivo temporal:
 ```

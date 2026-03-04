@@ -15,8 +15,8 @@
       "action": "archive"
     },
     {
-      "name": "Postiz",
-      "from_contains": "Postiz",
+      "name": "PostFlow",
+      "from_contains": "PostFlow",
       "action": "archive"
     },
     {
