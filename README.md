@@ -20,8 +20,7 @@ A curated catalog of Agent Skills plus supporting docs, scripts, and assets.
 - **holded-invoices** — Process invoice emails: download PDF attachments, extract vendor + date, generate normalized filename, and send to Holded inbox via n8n webhook.
 - **justdoit** — Manage tasks via the justdoit CLI (Google Tasks + Calendar): next view, list, search, complete/undo, and common workflows.
 - **morning-routine** — Orchestrates a full morning sweep of pending items (email, tasks, Slack, WhatsApp, X).
-- **postiz** — Use the Postiz CLI to publish posts (create, schedule, upload images) to any configured integrations.
-- **short-publish** — End-to-end workflow for turning a local video into transcripts, burned subtitles, and scheduled multi-network posts via Postiz MCP tools.
+- **short-publish** — End-to-end workflow for turning a local video into transcripts, burned subtitles, and scheduled multi-network posts via PostFlow CLI.
 - **skill-creator** — Guide for creating or updating Agent Skills using the standardized SKILL.md specification, including naming rules, optional frontmatter fields, validation, packaging, and best practices for structuring scripts, references, and assets.
 - **slack** — Manage unread Slack messages across the workspace: list, open, and reply with confirmation. Stores metadata for later actions.
 - **whatsapp-evo** — Manage WhatsApp via Evolution API (v2.x): list chats with unread messages and reply.
