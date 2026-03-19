@@ -1,6 +1,6 @@
 ---
 name: youtube-publish
-description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy+thumbnails with Gemini, update YouTube metadata, then schedule socials (PostFlow) 15 minutes after publish."
+description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy with the calling model, render thumbnails, update YouTube metadata, then schedule socials (PostFlow) 15 minutes after publish."
 ---
 
 # YouTube Publish (Scripted Flow)
@@ -14,6 +14,7 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 - **Technical Anchor (strict):** Every title must include at least one engineering keyword: `Orquestación`, `Despliegue`, `Infraestructura`, `Clean Architecture`, `Refactorización`, `Pipeline`, `Capa de Abstracción`.
 - **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
 - **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
+- **Content Generation Engine:** Titles, thumbnail ideas, description, chapters, and LinkedIn copy must be written by the same model executing this skill.
 - **Thumbnail Generation:** Generate 3 thumbnails using the presenter photo set. Default presenter is `antonio` (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). If the user indicates the video is from Nino, switch presenter to `nino` (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
 - **Reference Photos (strict):** For each generated thumbnail, always pass the 3 presenter images together as references. They are identity anchors (not fixed poses); the model is free to choose the best posture/composition.
 - **Thumbnail Engine:** Reuse `3rd-nano-banana-pro/scripts/generate_image.py` as the single image generation engine. Keep default model behavior (Flash). Only override model explicitly when requested.
@@ -74,18 +75,69 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      ```
    - Use today's date and the video slug from step 1 as the filename.
 
-4. **Generate copy (Gemini headless)**
-   - Use `gemini` CLI on the cleaned SRT. Generate:
+4. **Generate copy with the calling model**
+   - Read `<workdir>/transcript.es.cleaned.srt` directly and generate:
      - 3 Technical Authority Titles.
      - 3 Thumbnail ideas (Artifact-based).
      - Description (remove any self-link to current video).
      - Chapters (MM:SS).
      - LinkedIn post (per rules).
-     - Save into `<workdir>/content.md`.
+   - Save the result into `<workdir>/content.md`.
+   - Also save thumbnail concepts into `<workdir>/ideas.json` with this shape:
+     ```json
+     {
+       "titles": ["...", "...", "..."],
+       "thumbnails": [
+         {"text": "...", "artifact": "...", "concept": "..."},
+         {"text": "...", "artifact": "...", "concept": "..."},
+         {"text": "...", "artifact": "...", "concept": "..."}
+       ]
+     }
+     ```
+   - Make sure `content.md` contains at least these sections so downstream validation stays compatible:
+     ```md
+     # Pack YouTube — <slug>
+
+     ## Enlace del vídeo
+     <video_url>
+
+     ## Títulos
+     - ...
+     - ...
+     - ...
+
+     ## Ideas de thumbnails
+     1. Texto: ...
+        Artifact: ...
+        Concept: ...
+
+     ## Descripción
+     ...
+
+     ## Capítulos
+     00:00 ...
+
+     ## LinkedIn
+     ...
+
+     ## Título (final)
+
+     ## Descripción (final)
+
+     ## Capítulos (final)
+
+     ## Post LinkedIn (final)
+
+     ## Thumbnail (final)
+
+     ## Programación (final)
+     (YYYY-MM-DD HH:MM o "private")
+     ```
    - Title quality gate: reject title candidates that break blacklist or technical-anchor rules.
 
-5. **Generate 3 thumbnails (Gemini image)**
+5. **Generate 3 thumbnails**
    - Use presenter photos according to context: by default `antonio`, and `nino` only when explicitly requested for a Nino video. Create 3 images into `<workdir>/thumb-1.png`, `thumb-2.png`, `thumb-3.png`.
+   - The same model executing the skill must derive the 3 image prompts from the transcript and `ideas.json`, then save each prompt into `<workdir>/thumb-1.prompt.txt`, `thumb-2.prompt.txt`, `thumb-3.prompt.txt`.
    - Keep the two anchors fixed (massive white text + cinematic cyan/magenta look), but allow concept/composition/artifact/background to vary freely by story.
    - Target mix: 1 safe option + 2 exploratory options.
    - Example with multiple inputs:
@@ -93,8 +145,8 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      uv run /path/to/nano-banana-pro/scripts/generate_image.py --prompt "Antonio working..." --filename "thumb-1.png" --input-image assets/antonio-1.png assets/antonio-2.png assets/antonio-3.png
      ```
    - If using helper scripts:
-     - Default: `python scripts/generate_titles_thumbs.py --presenter antonio ...`
-     - Nino video: `python scripts/generate_titles_thumbs.py --presenter nino ...`
+     - Batch render from an existing `ideas.json`: `python scripts/generate_missing_thumbs.py --presenter antonio --out-dir <videos-root>`
+     - Nino video: `python scripts/generate_missing_thumbs.py --presenter nino --out-dir <videos-root>`
      - Optional override: `--image-model <model>` only if explicitly needed; otherwise keep the default model.
 
 6. **Stop to ask for validation of**:

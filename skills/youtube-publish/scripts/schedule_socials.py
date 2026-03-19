@@ -235,7 +235,10 @@ def main():
 
     safe_comment_url = encode_underscores_in_url(args.comment_url)
     comment_content = f"{args.comment_text} {safe_comment_url}"
-    segments_json = json.dumps([{"text": text}, {"text": comment_content}], ensure_ascii=False)
+    first_segment = {"text": text}
+    if media_id:
+        first_segment["media_ids"] = [media_id]
+    segments_json = json.dumps([first_segment, {"text": comment_content}], ensure_ascii=False)
 
     for account_id in accounts:
         cmd = [
@@ -249,8 +252,6 @@ def main():
             "--scheduled-at",
             args.scheduled_date,
         ]
-        if media_id:
-            cmd += ["--media-id", media_id]
         run(cmd)
 
     print("Scheduled socials.")

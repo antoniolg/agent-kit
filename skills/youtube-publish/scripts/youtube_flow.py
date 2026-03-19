@@ -168,40 +168,29 @@ def apply_replacements(text, replacements):
     return text
 
 
-def generate_content_md(srt_text, workdir: Path, title_hint: str, video_url: str | None):
-    prompt = (
-        "Eres editor de YouTube. Con el SRT que recibes por stdin, genera en español:\n"
-        "- 3 títulos\n"
-        "- 3 ideas de thumbnails (texto corto)\n"
-        "- Descripción (1-2 párrafos)\n"
-        "- Capítulos con timestamps reales (formato MM:SS Título). 10-12 capítulos. No redondees.\n"
-        "- Post LinkedIn (optimizado para LinkedIn, conversacional)\n\n"
-        "Reglas de títulos:\n"
-        "- Evita tono de reacción o hype masivo.\n"
-        "- Prohibido usar: RIP, Increíble, Brutal, Locura, Definitivo, ¿El fin de...?, 👑, 🔥.\n"
-        "- Cada título debe incluir al menos una palabra técnica: Orquestación, Despliegue, Infraestructura, Clean Architecture, Refactorización, Pipeline, Capa de Abstracción.\n\n"
-        "Post LinkedIn reglas:\n"
-        "- 600–900 caracteres, 3–6 párrafos cortos, 1–2 emojis\n"
-        "- Arranca con principio técnico o problema real de ingeniería (no con anuncio del vídeo)\n"
-        "- 1 idea central, sin desviarse\n"
-        "- Línea final: “Link en el primer comentario.”\n"
-        "- Cierre con pregunta breve o CTA a comentar\n"
-        "- Menos tono creator-marketing; más conclusiones y tradeoffs técnicos\n"
-        "- Sin hashtags\n"
-        "En redes, indica que el enlace estará en el primer comentario (no pongas la URL ahí).\n"
-        "Reglas: no inventes; usa tokens exactos: ClawdBot, justdoit, MCP, Gemini, Google Places, WhatsApp, Telegram, Gmail, Google Sheets, Google Drive, X.\n"
-        "Salida: Markdown con encabezados exactamente: \n"
-        "## Títulos\n## Ideas de thumbnails\n## Descripción\n## Capítulos\n## LinkedIn\n"
-    )
-    if video_url:
-        prompt = f"Enlace del vídeo: {video_url}\n\n" + prompt
-
-    output = run(["gemini", prompt], input_text=srt_text)
-
+def create_content_md(workdir: Path, title_hint: str, video_url: str | None, transcript_path: Path | None):
+    transcript_ref = str(transcript_path) if transcript_path else ""
     template = f"""# Pack YouTube — {title_hint or 'Sin título'}
 
 ## Enlace del vídeo
 {video_url or ''}
+
+## Transcript limpio
+{transcript_ref}
+
+## Notas para el agente
+- Lee el transcript limpio y genera títulos, ideas de thumbnail, descripción, capítulos y post de LinkedIn.
+- Mantén las reglas editoriales y de programación definidas en la skill.
+
+## Títulos
+
+## Ideas de thumbnails
+
+## Descripción
+
+## Capítulos
+
+## LinkedIn
 
 ## Título (final)
 
@@ -215,9 +204,6 @@ def generate_content_md(srt_text, workdir: Path, title_hint: str, video_url: str
 
 ## Programación (final)
 (YYYY-MM-DD HH:MM o "private")
-
-# Candidatos (generado)
-{output.strip()}
 """
 
     out_path = workdir / "content.md"
@@ -283,7 +269,11 @@ def main():
     parser.add_argument("--title-hint", help="Optional title hint for folder naming")
     parser.add_argument("--workdir", help="Output folder")
     parser.add_argument("--skip-transcribe", action="store_true")
-    parser.add_argument("--skip-gemini", action="store_true")
+    parser.add_argument(
+        "--skip-content-scaffold",
+        action="store_true",
+        help="Skip creating content.md scaffold for the calling model",
+    )
     parser.add_argument("--skip-draft-upload", action="store_true")
     parser.add_argument("--upload", action="store_true", help="Upload via publish_youtube.py after validation")
     parser.add_argument("--client-secret", required=True, help="OAuth client secret JSON")
@@ -374,27 +364,41 @@ def main():
         cleaned_srt_path = workdir / "transcript.es.cleaned.srt"
         cleaned_srt_path.write_text(cleaned, encoding="utf-8")
     else:
-        cleaned_srt_path = None
+        existing_cleaned_srt = workdir / "transcript.es.cleaned.srt"
+        cleaned_srt_path = existing_cleaned_srt if existing_cleaned_srt.exists() else None
 
     content_path = None
-    if not args.skip_gemini:
+    skip_content_scaffold = args.skip_content_scaffold
+    if not skip_content_scaffold:
         if not cleaned_srt_path:
-            raise RuntimeError("No transcript available for gemini generation")
-        content_path = generate_content_md(
-            cleaned_srt_path.read_text(encoding="utf-8"),
-            workdir,
-            args.title_hint or "",
-            video_url,
+            raise RuntimeError("No transcript available for content scaffold generation")
+        content_path = workdir / "content.md"
+        scaffold_created = False
+        if not content_path.exists():
+            content_path = create_content_md(
+                workdir,
+                args.title_hint or "",
+                video_url,
+                cleaned_srt_path,
+            )
+            scaffold_created = True
+        if scaffold_created:
+            print(f"Content scaffold created: {content_path}")
+            print("Fill the sections with the calling model, then rerun with --upload.")
+    elif (workdir / "content.md").exists():
+        content_path = workdir / "content.md"
+
+    if args.upload and not content_path:
+        raise RuntimeError("content.md required for upload")
+    if args.upload and content_path and extract_section(
+        content_path.read_text(encoding="utf-8"),
+        "Título (final)",
+    ) == "" and not skip_content_scaffold:
+        raise RuntimeError(
+            "content.md scaffold is still empty. Fill the FINAL sections with the calling model and rerun --upload."
         )
 
-    if content_path:
-        print(f"Content created: {content_path}")
-        print("Edit the FINAL sections, then press Enter to continue (or Ctrl+C to stop).")
-        input()
-
     if args.upload:
-        if not content_path:
-            raise RuntimeError("content.md required for upload")
         md = content_path.read_text(encoding="utf-8")
         validate_final_content(md, workdir, require_thumbnail=not args.thumbnail)
         title = extract_section(md, "Título (final)")

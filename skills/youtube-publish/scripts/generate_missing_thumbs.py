@@ -7,9 +7,40 @@ import subprocess
 import sys
 from pathlib import Path
 
+PRESENTER_PHOTO_BASENAMES = {
+    "antonio": ("antonio-1.png", "antonio-2.png", "antonio-3.png"),
+    "nino": ("nino-1.png", "nino-2.png", "nino-3.png"),
+}
+DEFAULT_PRESENTER = "antonio"
+
 
 def get_assets_dir() -> Path:
     return Path(__file__).resolve().parent.parent / "assets"
+
+
+def get_api_key() -> str | None:
+    # Prefer GOOGLE_API_KEY if present, otherwise fall back to the legacy GEMINI_API_KEY.
+    return os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
+
+def parse_presenter(value: str) -> str:
+    presenter = (value or DEFAULT_PRESENTER).strip().lower()
+    if presenter not in PRESENTER_PHOTO_BASENAMES:
+        options = ", ".join(sorted(PRESENTER_PHOTO_BASENAMES))
+        raise ValueError(f"Invalid presenter: {value!r}. Use one of: {options}")
+    return presenter
+
+
+def presenter_display_name(presenter: str) -> str:
+    return presenter.capitalize()
+
+
+def presenter_photo_keys(presenter: str) -> list[str]:
+    return [f"assets/{basename}" for basename in PRESENTER_PHOTO_BASENAMES[presenter]]
+
+
+def build_photo_map(assets_dir: Path, presenter: str) -> dict[str, Path]:
+    return {key: assets_dir / Path(key).name for key in presenter_photo_keys(presenter)}
 
 
 def word_count(text: str) -> int:
@@ -24,7 +55,7 @@ def normalize_thumb_text(text: str) -> str:
     return " ".join(words[:4]).strip()
 
 
-def build_image_prompt(thumb: dict) -> str:
+def build_image_prompt(thumb: dict, presenter_name: str) -> str:
     thumb_text = normalize_thumb_text(str(thumb.get("text", "") or ""))
     if word_count(thumb_text) > 4:
         thumb_text = " ".join(thumb_text.split(" ")[:4]).strip()
@@ -34,7 +65,8 @@ def build_image_prompt(thumb: dict) -> str:
 
     return (
         "Create a YouTube thumbnail (16:9). "
-        "Use the provided photo as Antonio's portrait (keep identity, face sharp, no distortions). "
+        f"Use all provided reference photos as {presenter_name}'s identity anchors (face, hair, beard, proportions). "
+        "You may choose the best posture, crop and expression for impact; do not copy a single source pose literally. "
         "Keep non-negotiable style anchors: cinematic dark mood with cyan/magenta accents, and massive bold white text. "
         "Allow creative freedom for composition, scene and storytelling if it improves the concept. "
         f"Technical artifact suggestion: {artifact}. "
@@ -48,26 +80,36 @@ def run_generate_image(
     image_script: Path,
     prompt: str,
     output_path: Path,
-    input_image: Path,
+    input_images: list[Path],
+    api_key: str,
+    image_model: str | None,
     timeout_s: int,
 ) -> None:
     cmd = [
-        sys.executable,
+        "uv",
+        "run",
         str(image_script),
         "--prompt",
         prompt,
         "--filename",
         str(output_path),
         "--input-image",
-        str(input_image),
+        *[str(path) for path in input_images],
+        "--api-key",
+        api_key,
     ]
+    if image_model:
+        cmd += ["--model", image_model]
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=timeout_s,
-    )
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("Missing 'uv' command required to run nano-banana image generation.") from exc
 
     if result.returncode != 0:
         stderr = (result.stderr or "").strip()
@@ -104,6 +146,16 @@ def main() -> int:
         action="store_true",
         help="Regenerate thumbs even if files already exist",
     )
+    parser.add_argument(
+        "--presenter",
+        default=DEFAULT_PRESENTER,
+        choices=sorted(PRESENTER_PHOTO_BASENAMES.keys()),
+        help="Presenter photo set for thumbnails (default: antonio)",
+    )
+    parser.add_argument(
+        "--image-model",
+        help="Optional image model override passed to nano-banana image generator",
+    )
     args = parser.parse_args()
 
     if args.timeout_s <= 0:
@@ -113,17 +165,32 @@ def main() -> int:
         print("--retries must be >= 0", file=sys.stderr)
         return 2
 
+    api_key = get_api_key()
+    if not api_key:
+        print(
+            "Missing GOOGLE_API_KEY (or legacy GEMINI_API_KEY) in environment for thumbnail generation.",
+            file=sys.stderr,
+        )
+        return 1
+
     out_dir = Path(os.path.expanduser(args.out_dir))
     if not out_dir.exists():
         print(f"Missing out dir: {out_dir}", file=sys.stderr)
         return 1
 
+    presenter = parse_presenter(args.presenter)
+    presenter_name = presenter_display_name(presenter)
     assets_dir = get_assets_dir()
-    photo_map = {
-        "assets/antonio-1.png": assets_dir / "antonio-1.png",
-        "assets/antonio-2.png": assets_dir / "antonio-2.png",
-        "assets/antonio-3.png": assets_dir / "antonio-3.png",
-    }
+    photo_keys = presenter_photo_keys(presenter)
+    photo_map = build_photo_map(assets_dir, presenter)
+    missing_assets = [key for key, path in photo_map.items() if not path.exists()]
+    if missing_assets:
+        print(
+            f"Missing presenter assets for '{presenter}': {', '.join(missing_assets)}",
+            file=sys.stderr,
+        )
+        return 1
+    presenter_reference_photos = [photo_map[key] for key in photo_keys]
 
     image_script = (
         Path(__file__).resolve().parents[2]
@@ -172,24 +239,7 @@ def main() -> int:
                 skipped += 1
                 continue
 
-            photo_key = str(thumb.get("photo", "") or "")
-            input_photo = photo_map.get(photo_key)
-            if input_photo is None:
-                basename = Path(photo_key).name
-                input_photo = next(
-                    (p for k, p in photo_map.items() if Path(k).name == basename),
-                    None,
-                )
-
-            if input_photo is None or not input_photo.exists():
-                (video_dir / "error.thumbs.txt").write_text(
-                    f"Missing input photo for thumb-{idx}: {photo_key}\n",
-                    encoding="utf-8",
-                )
-                failed += 1
-                continue
-
-            prompt = build_image_prompt(thumb)
+            prompt = build_image_prompt(thumb, presenter_name=presenter_name)
             (video_dir / f"thumb-{idx}.prompt.txt").write_text(
                 prompt,
                 encoding="utf-8",
@@ -202,7 +252,9 @@ def main() -> int:
                         image_script=image_script,
                         prompt=prompt,
                         output_path=out_img,
-                        input_image=input_photo,
+                        input_images=presenter_reference_photos,
+                        api_key=api_key,
+                        image_model=args.image_model,
                         timeout_s=args.timeout_s,
                     )
                     ok += 1
