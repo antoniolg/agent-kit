@@ -13,6 +13,8 @@ try:
 except Exception:
     ZoneInfo = None
 
+from english_variant import prepare_english_assets, translate_text
+
 
 def run(cmd, input_text=None):
     result = subprocess.run(
@@ -168,8 +170,19 @@ def apply_replacements(text, replacements):
     return text
 
 
-def create_content_md(workdir: Path, title_hint: str, video_url: str | None, transcript_path: Path | None):
+def create_content_md(
+    workdir: Path,
+    title_hint: str,
+    video_url: str | None,
+    transcript_path: Path | None,
+    english_transcript_path: Path | None = None,
+    dubbed_audio_path: Path | None = None,
+    dubbed_video_path: Path | None = None,
+):
     transcript_ref = str(transcript_path) if transcript_path else ""
+    english_transcript_ref = str(english_transcript_path) if english_transcript_path else ""
+    dubbed_audio_ref = str(dubbed_audio_path) if dubbed_audio_path else ""
+    dubbed_video_ref = str(dubbed_video_path) if dubbed_video_path else ""
     template = f"""# Pack YouTube — {title_hint or 'Sin título'}
 
 ## Enlace del vídeo
@@ -178,9 +191,19 @@ def create_content_md(workdir: Path, title_hint: str, video_url: str | None, tra
 ## Transcript limpio
 {transcript_ref}
 
+## Transcript EN
+{english_transcript_ref}
+
+## Audio doblado EN
+{dubbed_audio_ref}
+
+## Video doblado EN
+{dubbed_video_ref}
+
 ## Notas para el agente
 - Lee el transcript limpio y genera títulos, ideas de thumbnail, descripción, capítulos y post de LinkedIn.
 - Mantén las reglas editoriales y de programación definidas en la skill.
+- Si existe transcript EN, genera también una propuesta de título y descripción en inglés para YouTube multi-language.
 
 ## Títulos
 
@@ -204,6 +227,10 @@ def create_content_md(workdir: Path, title_hint: str, video_url: str | None, tra
 
 ## Programación (final)
 (YYYY-MM-DD HH:MM o "private")
+
+## Title (EN)
+
+## Description (EN)
 """
 
     out_path = workdir / "content.md"
@@ -263,6 +290,17 @@ def validate_final_content(md_text: str, workdir: Path, require_thumbnail: bool)
             print(f"- {warning}")
 
 
+def load_existing_english_assets(workdir: Path) -> dict[str, str]:
+    asset_map = {
+        "transcript_en": workdir / "transcript.en.srt",
+        "dubbed_audio_en": workdir / "dubbed_audio.en.wav",
+        "dubbed_video_en": workdir / "dubbed_video.en.mp4",
+        "title_en": workdir / "title.en.txt",
+        "description_en": workdir / "description.en.txt",
+    }
+    return {key: str(path) for key, path in asset_map.items() if path.exists()}
+
+
 def main():
     parser = argparse.ArgumentParser(description="End-to-end YouTube prep workflow")
     parser.add_argument("--videos", nargs="+", required=True, help="Input video file(s)")
@@ -281,6 +319,13 @@ def main():
     parser.add_argument("--timezone")
     parser.add_argument("--thumbnail", help="Thumbnail path (optional, final)")
     parser.add_argument("--privacy-status", help="private|unlisted|public")
+    parser.add_argument("--prepare-english", action="store_true", help="Prepare English transcript/title/description and dubbed audio")
+    parser.add_argument("--english-voice", help="Reference English voice sample WAV for dubbing")
+    parser.add_argument("--english-voice-text-file", help="Transcript of the English reference voice sample")
+    parser.add_argument("--english-dub-model", default="mlx-community/chatterbox-turbo-fp16")
+    parser.add_argument("--english-dubber-python", help="Python runtime for youtube-dubber")
+    parser.add_argument("--english-dubber-script", help="Path to youtube-dubber/scripts/dub_mlx_audio.py")
+    parser.add_argument("--deepl-auth-key", help="DeepL auth key (falls back to DEEPL_API_KEY or DEEPL_AUTH_KEY)")
     args = parser.parse_args()
 
     now = datetime.now().strftime("%Y-%m-%d_%H%M")
@@ -341,6 +386,7 @@ def main():
 
     srt_path = None
     cleaned_srt_path = None
+    english_assets = load_existing_english_assets(workdir)
 
     if not args.skip_transcribe:
         srt_path = transcribe_parakeet(video_out, workdir)
@@ -367,6 +413,27 @@ def main():
         existing_cleaned_srt = workdir / "transcript.es.cleaned.srt"
         cleaned_srt_path = existing_cleaned_srt if existing_cleaned_srt.exists() else None
 
+    if args.prepare_english:
+        if not cleaned_srt_path:
+            raise RuntimeError("transcript.es.cleaned.srt is required to prepare English assets")
+        if not args.english_voice:
+            raise RuntimeError("--english-voice is required with --prepare-english")
+        required_english_assets = {"transcript_en", "dubbed_audio_en", "dubbed_video_en"}
+        if not required_english_assets.issubset(english_assets):
+            english_assets = prepare_english_assets(
+                video=video_out,
+                spanish_srt=cleaned_srt_path,
+                out_dir=workdir,
+                voice=Path(args.english_voice),
+                voice_text_file=Path(args.english_voice_text_file) if args.english_voice_text_file else None,
+                deepl_auth_key=args.deepl_auth_key,
+                dubber_python=Path(args.english_dubber_python) if args.english_dubber_python else None,
+                dubber_script=Path(args.english_dubber_script) if args.english_dubber_script else None,
+                dub_model=args.english_dub_model,
+            )
+        else:
+            print("Reusing existing English assets.")
+
     content_path = None
     skip_content_scaffold = args.skip_content_scaffold
     if not skip_content_scaffold:
@@ -380,6 +447,9 @@ def main():
                 args.title_hint or "",
                 video_url,
                 cleaned_srt_path,
+                Path(english_assets["transcript_en"]) if english_assets.get("transcript_en") else None,
+                Path(english_assets["dubbed_audio_en"]) if english_assets.get("dubbed_audio_en") else None,
+                Path(english_assets["dubbed_video_en"]) if english_assets.get("dubbed_video_en") else None,
             )
             scaffold_created = True
         if scaffold_created:
@@ -422,6 +492,20 @@ def main():
 
         desc_file = workdir / "description.final.txt"
         desc_file.write_text(description, encoding="utf-8")
+
+        if args.prepare_english:
+            title_en = extract_section(md, "Title (EN)")
+            description_en = extract_section(md, "Description (EN)")
+            if not title_en:
+                title_en = translate_text(title.strip(), args.deepl_auth_key)
+            if not description_en:
+                description_en = translate_text(description.strip(), args.deepl_auth_key)
+            title_en_path = workdir / "title.en.txt"
+            description_en_path = workdir / "description.en.txt"
+            title_en_path.write_text(title_en.strip() + "\n", encoding="utf-8")
+            description_en_path.write_text(description_en.strip() + "\n", encoding="utf-8")
+            english_assets["title_en"] = str(title_en_path)
+            english_assets["description_en"] = str(description_en_path)
 
         cmd = [
             sys.executable,
@@ -480,6 +564,16 @@ def main():
     print(f"Final video: {video_out}")
     if cleaned_srt_path:
         print(f"Transcript (clean): {cleaned_srt_path}")
+    if english_assets.get("transcript_en"):
+        print(f"Transcript (EN): {english_assets['transcript_en']}")
+    if english_assets.get("dubbed_audio_en"):
+        print(f"Dubbed audio (EN): {english_assets['dubbed_audio_en']}")
+    if english_assets.get("dubbed_video_en"):
+        print(f"Dubbed video (EN): {english_assets['dubbed_video_en']}")
+    if english_assets.get("title_en"):
+        print(f"Title (EN): {english_assets['title_en']}")
+    if english_assets.get("description_en"):
+        print(f"Description (EN): {english_assets['description_en']}")
     if content_path:
         print(f"Content: {content_path}")
 

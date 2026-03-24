@@ -1,6 +1,6 @@
 ---
 name: youtube-publish
-description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy with the calling model, render thumbnails, update YouTube metadata, then schedule socials (PostFlow) 15 minutes after publish."
+description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy with the calling model, optionally prepare English dubbing assets, render thumbnails, update YouTube metadata, then schedule socials (PostFlow) 15 minutes after publish."
 ---
 
 # YouTube Publish (Scripted Flow)
@@ -15,6 +15,8 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 - **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
 - **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
 - **Content Generation Engine:** Titles, thumbnail ideas, description, chapters, and LinkedIn copy must be written by the same model executing this skill.
+- **English Variant:** When the user wants a multilingual YouTube version, always generate an English pack for the same video: translated transcript, English title, English description, and dubbed English audio.
+- **English Scope:** The English pack is for YouTube multi-language audio/localization only. Do not create English social posts unless the user explicitly asks for them.
 - **Thumbnail Generation:** Generate 3 thumbnails using the presenter photo set. Default presenter is `antonio` (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). If the user indicates the video is from Nino, switch presenter to `nino` (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
 - **Reference Photos (strict):** For each generated thumbnail, always pass the 3 presenter images together as references. They are identity anchors (not fixed poses); the model is free to choose the best posture/composition.
 - **Thumbnail Engine:** Reuse `3rd-nano-banana-pro/scripts/generate_image.py` as the single image generation engine. Keep default model behavior (Flash). Only override model explicitly when requested.
@@ -75,7 +77,21 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      ```
    - Use today's date and the video slug from step 1 as the filename.
 
-4. **Generate copy with the calling model**
+4. **Prepare English dubbing assets (when multilingual output is requested)**
+   - Read `<workdir>/transcript.es.cleaned.srt` and create:
+     - `<workdir>/transcript.en.srt` translated to natural English while preserving timestamps.
+     - `<workdir>/title.en.txt` with 1 English YouTube title for the dubbed track.
+     - `<workdir>/description.en.txt` with 1 English YouTube description for the dubbed track.
+   - Generate dubbed English audio using the `youtube-dubber` project.
+   - Preferred baseline:
+     - `mlx-community/chatterbox-turbo-fp16`
+     - short reference clip of about `8-12s`
+   - Save at least:
+     - `<workdir>/dubbed_audio.en.wav`
+     - `<workdir>/dubbed_video.en.mp4` if the dubbing pipeline also muxes the video
+   - Keep the English title/description technically faithful to the Spanish source, not marketing-localized beyond what is needed for natural English.
+
+5. **Generate copy with the calling model**
    - Read `<workdir>/transcript.es.cleaned.srt` directly and generate:
      - 3 Technical Authority Titles.
      - 3 Thumbnail ideas (Artifact-based).
@@ -132,10 +148,14 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 
      ## Programación (final)
      (YYYY-MM-DD HH:MM o "private")
+
+     ## Title (EN)
+
+     ## Description (EN)
      ```
    - Title quality gate: reject title candidates that break blacklist or technical-anchor rules.
 
-5. **Generate 3 thumbnails**
+6. **Generate 3 thumbnails**
    - Use presenter photos according to context: by default `antonio`, and `nino` only when explicitly requested for a Nino video. Create 3 images into `<workdir>/thumb-1.png`, `thumb-2.png`, `thumb-3.png`.
    - The same model executing the skill must derive the 3 image prompts from the transcript and `ideas.json`, then save each prompt into `<workdir>/thumb-1.prompt.txt`, `thumb-2.prompt.txt`, `thumb-3.prompt.txt`.
    - Keep the two anchors fixed (massive white text + cinematic cyan/magenta look), but allow concept/composition/artifact/background to vary freely by story.
@@ -149,27 +169,29 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      - Nino video: `python scripts/generate_missing_thumbs.py --presenter nino --out-dir <videos-root>`
      - Optional override: `--image-model <model>` only if explicitly needed; otherwise keep the default model.
 
-6. **Stop to ask for validation of**:
+7. **Stop to ask for validation of**:
     - Title (choose one of the 3 generated).
     - Thumbnail (choose one of the 3 generated).
     - Description (edit if needed).
     - Chapters (edit if needed).
     - LinkedIn post (edit if needed).
+    - English title (edit if needed).
+    - English description (edit if needed).
 
-7. **Update YouTube**
+8. **Update YouTube**
    - Command:
      ```bash
      python scripts/update_youtube.py --video-id <id> --title "..." --description-file <desc.txt> --thumbnail <thumb.png> --publish-at "YYYY-MM-DD HH:MM" --timezone <IANA> --client-secret <path>
      ```
 
-8. **Build native X video variant (after thumbnail choice)**
+9. **Build native X video variant (after thumbnail choice)**
    - Command:
      ```bash
      python scripts/build_x_native_video.py --video <video.mp4> --thumbnail <thumb.png> --output <workdir>/video-x.mp4 --intro-ms 500
      ```
    - Result: a version ready for X where the first 500ms shows the selected thumbnail as a static cover frame.
 
-9. **Schedule socials (PostFlow, excluding X)**
+10. **Schedule socials (PostFlow, excluding X)**
    - Command:
      ```bash
      python scripts/schedule_socials.py --text-file <linkedin.txt> --scheduled-date <ISO8601+offset> --comment-url <video_url> --image <thumb.png>
@@ -177,7 +199,8 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
    - This script publishes to configured socials except X.
    - Note: `schedule_socials.py` percent-encodes underscores in the `--comment-url` (e.g. `_` -> `%5F`) to avoid LinkedIn URL formatting issues.
 
-10. **Final Reminder**
+11. **Final Reminder**
    - Explicitly remind the user to go to YouTube Studio to:
      - Enable monetization (not supported via API).
      - Add End Screens (not supported via API).
+     - If multilingual output was requested, upload the English dubbed audio track and apply the English title/description in the YouTube Studio multi-language UI.
