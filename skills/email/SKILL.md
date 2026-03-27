@@ -1,21 +1,16 @@
 ---
 name: email
-description: Manage inbox email. Uses the inbox script and stores metadata (ids) to open or archive messages later.
+description: "Manage Gmail and iCloud inboxes via helper scripts: list messages, open, reply, and archive while preserving metadata for later actions. Use when triaging email, replying to messages, bulk-archiving threads, or checking inbox status across multiple accounts."
 ---
 
 # Email (inbox)
 
-## Goal
 List Gmail/iCloud inboxes showing a clean user view while preserving metadata (IDs) for later actions.
 
-## Base command
-- Helper in the skill: `scripts/email-inbox`
-- Always pass `--json-out` to save metadata.
-- Configure accounts in `~/.config/skills/config.json` under `email`:
-  - `gmail_accounts`: list of Gmail accounts
-  - `icloud_user`: iCloud user (optional)
+## Configuration
 
-Example:
+Accounts are configured in `~/.config/skills/config.json` under `email`:
+
 ```json
 {
   "email": {
@@ -25,93 +20,74 @@ Example:
 }
 ```
 
-Example:
+## Workflow
+
+### 1. List inbox
+
+```bash
+scripts/email-inbox --json-out /tmp/inbox.json
 ```
-scripts/email-inbox
-```
 
-## Flow
-1) Run the command with `--json-out /tmp/inbox.json`.
-2) Show the user ONLY the clean output (numbered list), using the agreed format (see "Output format").
-3) Read `/tmp/inbox.json` to get IDs and keep them for later actions.
-4) Propose recommended actions (archive/open/reply/wait) using your own judgment; ask for confirmation before acting.
+- Show the user **only** the clean numbered list (see Output format below).
+- Read `/tmp/inbox.json` internally for IDs — never show IDs to the user.
+- Propose recommended actions (archive/open/reply/wait) using your judgment; ask for confirmation before acting.
+- If the JSON is stale or missing, re-run with `--json-out`.
 
-Helpers (from the skill folder):
-- `scripts/email-open --index <n>` (Gmail/iCloud) opens and writes `/tmp/email-open.json`.
-- `scripts/email-archive --index <n>` (Gmail/iCloud) archives the message/thread. Accepts multiple indices.
-- `scripts/email-reply --index <n> --body-file <path>` replies to the message (Gmail/iCloud).
-- `scripts/email-mailboxes --account <icloud>` lists iCloud mailboxes.
+### 2. Open an email
 
-## Metadata format
-The JSON contains a list of items with:
-- `index` (number shown to the user)
-- `source` (`gmail` or `icloud`)
-- `account`
-- `id` (Gmail: threadId, iCloud: UID)
-- `from`
-- `subject`
-
-## Open an email (Gmail)
-Use the helper:
-```
+```bash
 scripts/email-open --index <n>
 ```
-This prints the email (from/subject/date/body) and saves metadata to `/tmp/email-open.json`.
 
-## Reply to an email (Gmail/iCloud)
-Before sending, **always** show the draft to the user and ask for explicit approval.
+Prints from/subject/date/body and saves metadata to `/tmp/email-open.json`. Works for both Gmail and iCloud.
 
-Use the helper:
-```
+### 3. Reply to an email
+
+**Always** show the draft to the user and get explicit approval before sending.
+
+```bash
 scripts/email-reply --index <n> --body-file /tmp/reply.txt
 ```
 
-- If you need to reply-all (Gmail), add `--reply-all`.
-- To force a subject: `--subject "Re: ..."`
-- iCloud replies via SMTP with the same app password and **stores a copy in Sent**.
-- To save to Sent without sending (already sent): `--append-only`.
-- To avoid saving to Sent: `--no-append-sent`.
-- By default it replies-all and keeps CC. To reply only to the sender: `--no-reply-all`.
-- After sending a reply, archive the thread with `scripts/email-archive --index <n>` to keep the inbox clean.
+| Flag | Purpose |
+|------|---------|
+| `--reply-all` | Reply to all recipients (Gmail) |
+| `--no-reply-all` | Reply only to sender (overrides default reply-all) |
+| `--subject "Re: ..."` | Force a custom subject line |
+| `--append-only` | Save to Sent without sending (already sent externally) |
+| `--no-append-sent` | Send without saving to Sent |
 
-## Archive an email (Gmail)
-Use the helper:
-```
+iCloud replies via SMTP with the same app password and stores a copy in Sent. After sending, archive the thread to keep inbox clean:
+
+```bash
 scripts/email-archive --index <n>
 ```
-Examples:
-```
+
+### 4. Archive emails
+
+```bash
 scripts/email-archive --index 1 --index 2 --index 3
 scripts/email-archive --index 1,2,3,4,9,10
 ```
 
-## iCloud (current state)
-- List: supported by `inbox`.
-- Open: supported by `scripts/email-open --index <n>` (uses UID).
-- Archive: supported by `scripts/email-archive --index <n>`.
-  - If it cannot detect the archive mailbox, use `--mailbox "<Name>"`.
-  - To list mailbox names: `scripts/email-mailboxes --account <icloud>`.
+Works for both Gmail and iCloud. For iCloud, if the archive mailbox cannot be detected automatically, specify it with `--mailbox "<Name>"`. List available mailboxes with `scripts/email-mailboxes --account <icloud>`.
 
-## Missing context
-- If the JSON is stale or missing, run inbox again with `--json-out`.
+## Metadata format
 
-## Notes
-- The script may prompt for the iCloud password if env vars are missing.
-- Avoid showing IDs to the user; only show the clean list.
+Each item in `/tmp/inbox.json` contains: `index`, `source` (`gmail`/`icloud`), `account`, `id` (Gmail: threadId, iCloud: UID), `from`, `subject`.
 
 ## Output format
-- Separate by account (Gmail/iCloud) while keeping the absolute numbering.
-- Account header in bold: `📧 **<account>**`.
-- Separator line after the header: `—`.
-- Use emojis before each message with this legend:
-  - 🔍 open
-  - 🗂️ archive
-  - 👀 review
-  - ⏳ wait
-- Do not bold the sender; bold is only for the account header.
 
-## Optional triage rules
-If the user notices failures, add specific rules in `rules.json` to refine future recommendations.
+- Separate by account with absolute numbering across all accounts.
+- Account header: `📧 **<account>**` followed by `—` separator.
+- Prefix each message with an action emoji: 🔍 open · 🗂️ archive · 👀 review · ⏳ wait.
+- Do not bold the sender; bold is only for account headers.
 
-### Active rules
-Rules live in `rules.json` inside this skill (single source of truth).
+## Triage rules
+
+Custom rules in `rules.json` (this skill folder) refine action recommendations. Add rules when the user notices repeated misclassifications.
+
+## Notes
+
+- The script may prompt for the iCloud password if env vars are missing.
+- Always pass `--json-out` when running inbox to ensure metadata is available for subsequent actions.

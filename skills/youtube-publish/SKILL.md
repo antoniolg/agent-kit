@@ -1,49 +1,52 @@
 ---
 name: youtube-publish
-description: "End-to-end YouTube publishing workflow using ordered scripts: prepare/concat video, upload draft, transcribe with Parakeet, generate copy with the calling model, optionally prepare English dubbing assets, render thumbnails, update YouTube metadata, then schedule socials (PostFlow) 15 minutes after publish."
+description: “End-to-end YouTube publishing workflow — prepare video, upload draft, transcribe, generate copy and thumbnails, update metadata, and schedule socials via PostFlow. Use when publishing a YouTube video, generating thumbnails, scheduling social posts, or preparing multilingual content.”
 ---
 
 # YouTube Publish (Scripted Flow)
 
-Use scripts in order. Stop for validation after copy + thumbnail generation. Ask exact publish time if not provided.
+Execute scripts in order. Stop for user validation after copy + thumbnail generation. Ask exact publish time if not provided.
 
-## Behavior rules for the agent
+## Agent rules
 
-- **Tone & Authority:** Titles and copy must focus on engineering, architecture, and solving developer friction. Avoid reaction-style hype and mass-content phrasing.
-- **Title Blacklist (strict):** Forbidden in titles: `RIP`, `Increíble`, `Brutal`, `Locura`, `Definitivo`, `¿El fin de...?`, and crown/fire emojis.
-- **Technical Anchor (strict):** Every title must include at least one engineering keyword: `Orquestación`, `Despliegue`, `Infraestructura`, `Clean Architecture`, `Refactorización`, `Pipeline`, `Capa de Abstracción`.
-- **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
-- **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
-- **Content Generation Engine:** Titles, thumbnail ideas, description, chapters, and LinkedIn copy must be written by the same model executing this skill.
-- **English Variant:** When the user wants a multilingual YouTube version, always generate an English pack for the same video: translated transcript, English title, English description, and dubbed English audio.
-- **English Scope:** The English pack is for YouTube multi-language audio/localization only. Do not create English social posts unless the user explicitly asks for them.
-- **Thumbnail Generation:** Generate 3 thumbnails using the presenter photo set. Default presenter is `antonio` (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). If the user indicates the video is from Nino, switch presenter to `nino` (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
-- **Reference Photos (strict):** For each generated thumbnail, always pass the 3 presenter images together as references. They are identity anchors (not fixed poses); the model is free to choose the best posture/composition.
-- **Thumbnail Engine:** Reuse `3rd-nano-banana-pro/scripts/generate_image.py` as the single image generation engine. Keep default model behavior (Flash). Only override model explicitly when requested.
-- **Thumbnail Creativity Rule:** Deliver 1 safer option + 2 exploratory options. Avoid producing near-duplicates. If an unconventional concept communicates better for that specific video, prioritize it.
-- **Workflow:** Upload a private draft before generating copy so the video URL can be used in social text.
-- **Newsletter:** Disabled in this flow. Do not generate or schedule newsletter here.
-- **X Strategy:** Do not schedule/publish to X via PostFlow in this flow. X is handled as native video upload outside this step.
-- **Links:** In social posts, the comment must not be just the link; it must include a brief descriptive text inviting to watch (e.g., "Watch the full technical analysis here: https://...").
-- **Comment Sequence:** For final publish/update, always use this order: set video to `unlisted`, insert promo comment (`Domina la IA...`), then set final status (`private` with `publishAt` if scheduled, otherwise `private`).
-- **Schedule Decision Required:** Never publish without an explicit decision in `Programación (final)`: either a date `YYYY-MM-DD HH:MM` or `private`.
-- **Timing:** Schedule social posts 15 minutes after the YouTube publish time.
-- **Audio Consistency:** `prepare_video.py` runs audio normalization in `auto` mode by default. It analyzes LUFS/true peak/LRA and only re-encodes audio when out of target.
+### Content tone
 
----
+Titles and copy must focus on engineering, architecture, and solving developer friction. Avoid reaction-style hype.
 
-## Content Styles
+- **Title blacklist (strict):** `RIP`, `Increíble`, `Brutal`, `Locura`, `Definitivo`, `¿El fin de...?`, crown/fire emojis.
+- **Technical anchor (strict):** Every title must include at least one: `Orquestación`, `Despliegue`, `Infraestructura`, `Clean Architecture`, `Refactorización`, `Pipeline`, `Capa de Abstracción`.
+- **Title derivation:** Derive from the video stem and SRT technical density — do not ask the user for a hint.
 
-### LinkedIn Post Style
+### Presenter selection
 
-- **Length/Format**: 600–900 characters, 3–6 short paragraphs, 1–2 emojis.
-- **Strategy (Signal vs Noise):** Start with a principle or real engineering problem, not with "new video" framing.
-- **Identity:** Keep the tone of technical authority. Fewer creator-marketing phrases, more architecture conclusions and tradeoffs.
-- **Scope:** 1 central idea focused on technical authority. No digressions.
-- **Closing**: Final line “Link en el primer comentario.” followed by a short question or CTA.
-- **Restrictions**: No hashtags.
+Default presenter is **antonio** (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). Switch to **nino** (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`) only when the user explicitly indicates a Nino video. Always pass all 3 presenter images as identity-anchor references for each thumbnail.
 
----
+### Scheduling and publishing
+
+- Resolve publish time to `YYYY-MM-DD HH:MM` with `--publish-at` + `--timezone` (always determine timezone).
+- **Comment sequence:** set `unlisted` → insert promo comment (`Domina la IA...`) → set final status (`private` with `publishAt` if scheduled, otherwise `private`).
+- **Schedule decision required:** Never publish without an explicit decision — either `YYYY-MM-DD HH:MM` or `private`.
+- Schedule social posts **15 minutes after** YouTube publish time.
+- Newsletter and X are excluded from this flow.
+
+### Thumbnail rules
+
+- Engine: `3rd-nano-banana-pro/scripts/generate_image.py` (keep default Flash model unless overridden).
+- Two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents.
+- Target mix: 1 safe option + 2 exploratory. Avoid near-duplicates.
+
+### English variant (multilingual)
+
+When the user wants a multilingual version, generate an English pack (translated transcript, title, description, dubbed audio) for YouTube multi-language localization only. Do not create English social posts unless explicitly requested.
+
+### Social posts
+
+- In social posts, always include descriptive text inviting to watch — never just a bare link.
+- `prepare_video.py` runs audio normalization in `auto` mode by default (targets `-14 LUFS`, `-1 dBTP`, max `LRA 9`; skips when already in range).
+
+### LinkedIn post style
+
+600–900 chars, 3–6 short paragraphs, 1–2 emojis. Start with an engineering principle or problem, not “new video.” Close with “Link en el primer comentario.” + question/CTA. No hashtags.
 
 ## Scripted flow (order)
 
