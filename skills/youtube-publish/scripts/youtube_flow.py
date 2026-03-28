@@ -322,9 +322,9 @@ def main():
     parser.add_argument("--prepare-english", action="store_true", help="Prepare English transcript/title/description and dubbed audio")
     parser.add_argument("--english-voice", help="Reference English voice sample WAV for dubbing")
     parser.add_argument("--english-voice-text-file", help="Transcript of the English reference voice sample")
-    parser.add_argument("--english-dub-model", default="mlx-community/chatterbox-turbo-fp16")
-    parser.add_argument("--english-dubber-python", help="Python runtime for youtube-dubber")
-    parser.add_argument("--english-dubber-script", help="Path to youtube-dubber/scripts/dub_mlx_audio.py")
+    parser.add_argument("--english-dub-model", default="voxtral-mini-tts-latest")
+    parser.add_argument("--english-dubber-python", help="Python runtime for youtube-dubber (defaults to ~/.venvs/voxtral-local/bin/python)")
+    parser.add_argument("--english-dubber-script", help="Path to youtube-dubber/scripts/dub_voxtral.py")
     parser.add_argument("--deepl-auth-key", help="DeepL auth key (falls back to DEEPL_API_KEY or DEEPL_AUTH_KEY)")
     args = parser.parse_args()
 

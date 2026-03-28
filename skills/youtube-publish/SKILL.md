@@ -83,13 +83,17 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      - `<workdir>/title.en.txt` with 1 English YouTube title for the dubbed track.
      - `<workdir>/description.en.txt` with 1 English YouTube description for the dubbed track.
    - Generate dubbed English audio using the `youtube-dubber` project.
-   - Preferred baseline:
-     - `mlx-community/chatterbox-turbo-fp16`
-     - short reference clip of about `8-12s`
+   - Default dubbing path:
+     - `scripts/dub_voxtral.py`
+     - model `voxtral-mini-tts-latest`
+     - English reference clip from the presenter's own voice when available
+   - Fallback path:
+     - Chatterbox / Qwen only if Voxtral is unavailable or clearly worse for a specific run
    - Save at least:
      - `<workdir>/dubbed_audio.en.wav`
      - `<workdir>/dubbed_video.en.mp4` if the dubbing pipeline also muxes the video
    - Keep the English title/description technically faithful to the Spanish source, not marketing-localized beyond what is needed for natural English.
+   - The goal is to run Voxtral through the same timed dubbing pipeline as the other models, not a manual narration-only shortcut.
 
 5. **Generate copy with the calling model**
    - Read `<workdir>/transcript.es.cleaned.srt` directly and generate:

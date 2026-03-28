@@ -8,9 +8,9 @@ import urllib.request
 from pathlib import Path
 
 
-DEFAULT_DUBBER_SCRIPT = Path.home() / "Projects/antoniolg/youtube-dubber/scripts/dub_mlx_audio.py"
-DEFAULT_DUBBER_PYTHON = Path.home() / ".venvs/dubbing-mlx/bin/python"
-DEFAULT_DUB_MODEL = "mlx-community/chatterbox-turbo-fp16"
+DEFAULT_DUBBER_SCRIPT = Path.home() / "Projects/antoniolg/youtube-dubber/scripts/dub_voxtral.py"
+DEFAULT_DUBBER_PYTHON = Path.home() / ".venvs/voxtral-local/bin/python"
+DEFAULT_DUB_MODEL = "voxtral-mini-tts-latest"
 DEFAULT_SOURCE_LANG = "ES"
 DEFAULT_TARGET_LANG = "EN-US"
 DEFAULT_DEEPL_BASE_URL = "https://api-free.deepl.com/v2/translate"
@@ -151,13 +151,6 @@ def dub_english_audio(
     dubber_python: Path = DEFAULT_DUBBER_PYTHON,
     dubber_script: Path = DEFAULT_DUBBER_SCRIPT,
     model: str = DEFAULT_DUB_MODEL,
-    temperature: float = 0.55,
-    top_p: float = 0.85,
-    top_k: int = 60,
-    repetition_penalty: float = 1.18,
-    trim_start_ms: int = 30,
-    fade_in_ms: int = 18,
-    fade_out_ms: int = 24,
 ) -> None:
     if not dubber_python.exists():
         raise RuntimeError(f"Missing dubbing Python runtime: {dubber_python}")
@@ -180,23 +173,9 @@ def dub_english_audio(
         str(out_audio),
         "--out-video",
         str(out_video),
-        "--model",
-        model,
-        "--temperature",
-        str(temperature),
-        "--top-p",
-        str(top_p),
-        "--top-k",
-        str(top_k),
-        "--repetition-penalty",
-        str(repetition_penalty),
-        "--trim-start-ms",
-        str(trim_start_ms),
-        "--fade-in-ms",
-        str(fade_in_ms),
-        "--fade-out-ms",
-        str(fade_out_ms),
     ]
+    if model:
+        cmd += ["--model", model]
     if voice_text_file is not None and voice_text_file.exists():
         cmd += ["--voice-text-file", str(voice_text_file)]
 
