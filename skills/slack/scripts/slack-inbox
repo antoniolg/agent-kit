@@ -2,6 +2,7 @@
 import argparse
 import datetime
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from slack_common import (
@@ -12,12 +13,76 @@ from slack_common import (
     resolve_user_name,
 )
 
+INFO_TIMEOUT_SECONDS = 5
+INFO_WORKERS = 12
+HISTORY_WORKERS = 12
+IGNORED_SUBTYPES = {
+    "channel_archive",
+    "channel_join",
+    "channel_leave",
+    "channel_name",
+    "channel_purpose",
+    "channel_topic",
+    "channel_unarchive",
+    "group_join",
+    "group_leave",
+    "group_name",
+    "group_purpose",
+    "group_topic",
+    "message_deleted",
+}
+
 
 def _ts_to_dt(ts: str) -> str:
     try:
         return datetime.datetime.fromtimestamp(float(ts)).isoformat(sep=" ", timespec="seconds")
     except Exception:
         return ""
+
+
+def _safe_ts(value) -> float:
+    if isinstance(value, dict):
+        value = value.get("ts") or ""
+    try:
+        number = float(value)
+    except Exception:
+        return 0.0
+    if number > 1_000_000_000_000:
+        return number / 1000.0
+    return number
+
+
+def _needs_info(conv) -> bool:
+    return conv.get("last_read") is None or (conv.get("is_im") and conv.get("latest") is None)
+
+
+def _fetch_conversation_info(token, conv):
+    try:
+        payload = api_call(
+            "conversations.info",
+            token,
+            {"channel": conv.get("id")},
+            timeout=INFO_TIMEOUT_SECONDS,
+        )
+    except SystemExit:
+        return None
+    return payload.get("channel", {})
+
+
+def _enrich_conversations(convs, token):
+    enriched = list(convs)
+    futures = {}
+    with ThreadPoolExecutor(max_workers=INFO_WORKERS) as executor:
+        for idx, conv in enumerate(enriched):
+            if _needs_info(conv):
+                futures[executor.submit(_fetch_conversation_info, token, conv)] = idx
+
+        for future in as_completed(futures):
+            idx = futures[future]
+            info = future.result()
+            if info:
+                enriched[idx] = {**enriched[idx], **info}
+    return enriched
 
 
 def _latest_unread(conv, token, last_read):
@@ -37,7 +102,7 @@ def _latest_unread(conv, token, last_read):
     messages = payload.get("messages", [])
     unread = []
     for msg in messages:
-        if msg.get("subtype") == "message_deleted":
+        if msg.get("subtype") in IGNORED_SUBTYPES:
             continue
         if "text" not in msg:
             continue
@@ -46,6 +111,32 @@ def _latest_unread(conv, token, last_read):
         return None, 0, payload.get("has_more", False)
     latest = max(unread, key=lambda m: float(m.get("ts", 0)))
     return latest, len(unread), payload.get("has_more", False)
+
+
+def _should_check_history(conv) -> bool:
+    unread_hint = conv.get("unread_count") or conv.get("unread_count_display") or 0
+    if unread_hint:
+        return True
+
+    last_read = _safe_ts(conv.get("last_read"))
+    if not last_read:
+        return False
+
+    latest = _safe_ts(conv.get("latest"))
+    if latest:
+        return latest > last_read
+
+    updated = _safe_ts(conv.get("updated"))
+    if updated:
+        return updated > last_read
+
+    return True
+
+
+def _fetch_candidate_history(token, conv):
+    last_read = conv.get("last_read") or ""
+    latest_msg, unread_count, has_more = _latest_unread(conv, token, last_read)
+    return conv, latest_msg, unread_count, has_more
 
 
 def main():
@@ -72,48 +163,28 @@ def main():
         },
         "channels",
     )
+    convs = _enrich_conversations(convs, token)
 
     items = []
     counter = 1
+    candidates = [conv for conv in convs if _should_check_history(conv)]
+    history_by_id = {}
+
+    with ThreadPoolExecutor(max_workers=HISTORY_WORKERS) as executor:
+        futures = {
+            executor.submit(_fetch_candidate_history, token, conv): conv.get("id")
+            for conv in candidates
+        }
+        for future in as_completed(futures):
+            conv, latest_msg, unread_count, has_more = future.result()
+            history_by_id[conv.get("id")] = (latest_msg, unread_count, has_more)
 
     for conv in convs:
-        unread_hint = conv.get("unread_count") or conv.get("unread_count_display") or 0
-
-        needs_info = (
-            conv.get("last_read") is None
-            or (conv.get("is_im") and conv.get("latest") is None)
-        )
-        if needs_info and unread_hint:
-            try:
-                info = api_call("conversations.info", token, {"channel": conv.get("id")}, timeout=5)
-                conv = {**conv, **info.get("channel", {})}
-            except (SystemExit, KeyboardInterrupt, TimeoutError, Exception):
-                continue
-        elif needs_info:
-            continue
-
-        unread_hint = conv.get("unread_count") or conv.get("unread_count_display") or unread_hint
-        last_read = conv.get("last_read") or ""
-        latest = conv.get("latest") or ""
-        if isinstance(latest, dict):
-            latest = latest.get("ts") or ""
-        if last_read:
-            if latest:
-                try:
-                    if float(latest) <= float(last_read) and not unread_hint:
-                        continue
-                except Exception:
-                    if not unread_hint:
-                        continue
-        else:
-            # Missing last_read: rely on unread hints.
-            if not unread_hint:
-                continue
-
-        latest_msg, unread_count, has_more = _latest_unread(conv, token, last_read)
+        latest_msg, unread_count, has_more = history_by_id.get(conv.get("id"), (None, 0, False))
         if not latest_msg:
             continue
 
+        last_read = conv.get("last_read") or ""
         display = conversation_display_name(conv, token, user_cache)
         latest_text = latest_msg.get("text", "").strip()
         latest_user = latest_msg.get("user") or latest_msg.get("username") or latest_msg.get("bot_id") or ""
