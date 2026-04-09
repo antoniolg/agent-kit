@@ -1,18 +1,11 @@
 ---
 name: weekly-newsletter
-description: "Genera la newsletter semanal de DevExpert recopilando contenido de X, YouTube, PostFlow y bookmarks. Crea borrador en Listmonk para revisión."
+description: "Generate the weekly DevExpert newsletter by gathering content from X, YouTube, PostFlow, and bookmarks, then create a draft campaign in Listmonk for review. Use when preparing the weekly newsletter, compiling weekly content highlights, creating Listmonk campaigns, or generating an HTML version for X Articles."
 ---
 
 # Weekly Newsletter DevExpert
 
-Genera la newsletter semanal recopilando todo el contenido publicado y programado de la semana.
-
-## Cuándo se usa
-
-- Una vez por semana, en el día/hora que defina el cron activo.
-- Rangos de contenido (agnóstico del día):
-  - **X (tweets propios + bookmarks), PostFlow y YouTube**: últimos 7 días hasta el momento de ejecución.
-  - Si hay una fecha/hora de corte indicada por el usuario, usar esa en lugar de la ventana de 7 días.
+Generate the weekly newsletter by gathering published and scheduled content from the past 7 days (or a user-specified cutoff) across X, YouTube, PostFlow, and bookmarks. Runs once per week on the active cron schedule.
 
 ## Flujo de trabajo
 
@@ -265,20 +258,24 @@ Antonio.
 
 ## Reglas de estilo
 
-- **TL;DR**: Siempre después de la intro. El vídeo de la semana va primero. Usar anclas (#seccion) para enlaces internos
-- **Tono**: Directo, sin rodeos, con criterio técnico
-- **Emojis**: Mínimos (0-2 en todo el email)
-- **Enlaces**: Alternar entre X y LinkedIn para distribuir tráfico
-- **No incluir**: El vídeo de la semana anterior si ya salió en la newsletter previa
-- **Bookmarks**: Usar para "Lecturas recomendadas" - contenido de terceros que aporta valor
-- **Novedades de modelos**: Sección opcional (si hay esa semana) al final, antes del CTA. Interesa a un grupo reducido, por eso va abajo. Buscar en bookmarks lanzamientos de modelos nuevos
-- **Saludo**: Siempre "¡Hola DevExpert!"
+| Regla | Detalle |
+|-------|---------|
+| TL;DR | Siempre después de la intro; vídeo de la semana va primero; usar anclas `#seccion` |
+| Tono | Directo, sin rodeos, con criterio técnico |
+| Emojis | Mínimos (0-2 en todo el email) |
+| Enlaces | Alternar entre X y LinkedIn para distribuir tráfico |
+| Exclusiones | No incluir el vídeo de la semana anterior si ya salió en la newsletter previa |
+| Bookmarks | Usar para "Lecturas recomendadas" — contenido de terceros que aporta valor |
+| Novedades de modelos | Sección opcional al final antes del CTA (buscar en bookmarks lanzamientos nuevos) |
+| Saludo | Siempre "¡Hola DevExpert!" |
 
 ## Parámetros de Listmonk
 
-- **Lista**: DevExpert (id: 3)
-- **Template**: DevExpert (id: 1)
-- **Content-type**: markdown
+| Parámetro | Valor |
+|-----------|-------|
+| Lista | DevExpert (id: 3) |
+| Template | DevExpert (id: 1) |
+| Content-type | markdown |
 
 ## Versión HTML para X Articles
 
