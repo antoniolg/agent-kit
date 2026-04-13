@@ -34,7 +34,10 @@ scripts/email-inbox
 1) Run the command with `--json-out /tmp/inbox.json`.
 2) Show the user ONLY the clean output (numbered list), using the agreed format (see "Output format").
 3) Read `/tmp/inbox.json` to get IDs and keep them for later actions.
-4) Propose recommended actions (archive/open/reply/wait) using your own judgment; ask for confirmation before acting.
+4) Treat `/tmp/inbox.json` as a frozen snapshot until you explicitly refresh the inbox again.
+5) If the user says "archive all except 141, 144" (or similar), interpret "all" as all items from the last shown snapshot, not every message currently in the live inbox. This avoids archiving new emails that arrived after the list was shown.
+6) Only refresh/reload the inbox before acting when the user explicitly asks for it, or when you no longer trust the saved snapshot.
+7) Propose recommended actions (archive/open/reply/wait) using your own judgment; ask for confirmation before acting.
 
 Helpers (from the skill folder):
 - `scripts/email-open --index <n>` (Gmail/iCloud) opens and writes `/tmp/email-open.json`.
@@ -94,9 +97,20 @@ scripts/email-archive --index 1,2,3,4,9,10
 
 ## Missing context
 - If the JSON is stale or missing, run inbox again with `--json-out`.
+- If you refresh, the new `/tmp/inbox.json` replaces the previous snapshot and becomes the new source of truth for follow-up actions.
 
 ## Notes
-- The script may prompt for the iCloud password if env vars are missing.
+- The iCloud helpers (`inbox`, `email-open`, `email-reply`, `email-mailboxes`, `email-archive`) read the app password from the `ICLOUD_APP_PASSWORD` environment variable.
+- If `ICLOUD_APP_PASSWORD` is not set, the script falls back to an interactive `getpass()` prompt, which fails in non-interactive/headless runs.
+- If iCloud access fails, first verify whether `ICLOUD_APP_PASSWORD` is exported in the current session before assuming the credential is wrong.
+- If a candidate password exists in local config for the same email address but IMAP returns `[AUTHENTICATIONFAILED]`, treat it as a different service credential rather than the iCloud app password.
+- Useful diagnostics:
+  - `python3 - <<'PY'
+import os
+print('ICLOUD_APP_PASSWORD' in os.environ)
+PY`
+  - `security find-internet-password -a '<icloud-user>' -s 'imap.mail.me.com' -g 2>&1 | head`
+  - `security find-generic-password -a '<icloud-user>' -g 2>&1 | head`
 - Avoid showing IDs to the user; only show the clean list.
 
 ## Output format
