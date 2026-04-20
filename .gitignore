@@ -3,3 +3,4 @@ skills/.system/
 skills/gen-pdf/assets/
 **/__pycache__/
 *.pyc
+.DS_Store
