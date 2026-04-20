@@ -194,7 +194,7 @@ def main() -> int:
 
     image_script = (
         Path(__file__).resolve().parents[2]
-        / "3rd-nano-banana-pro"
+        / "nano-banana-pro"
         / "scripts"
         / "generate_image.py"
     )

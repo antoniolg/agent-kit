@@ -14,6 +14,7 @@ except Exception:
     ZoneInfo = None
 
 from english_variant import prepare_english_assets, translate_text
+from dub_srt_utils import write_cleaned_and_dub_srt
 
 
 def run(cmd, input_text=None):
@@ -161,13 +162,6 @@ def transcribe_parakeet(video_path: Path, workdir: Path):
     if not srt_path.exists():
         raise FileNotFoundError("Parakeet SRT not found")
     return srt_path
-
-
-def apply_replacements(text, replacements):
-    for pattern, repl in replacements:
-        text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
-    text = re.sub(r"\b[xX]\b", "X", text)
-    return text
 
 
 def create_content_md(
@@ -386,32 +380,17 @@ def main():
 
     srt_path = None
     cleaned_srt_path = None
+    dub_srt_path = None
     english_assets = load_existing_english_assets(workdir)
 
     if not args.skip_transcribe:
         srt_path = transcribe_parakeet(video_out, workdir)
-        srt_text = srt_path.read_text(encoding="utf-8")
-
-        replacements = [
-            (r"\bcloudbot\b", "ClawdBot"),
-            (r"\bclawdbot\b", "ClawdBot"),
-            (r"\bcloudboat\b", "ClawdBot"),
-            (r"\bjust\s*do\s*it\b", "justdoit"),
-            (r"\bcloud\s+opus\b", "Claude Opus"),
-            (r"\bwhatsapp\b", "WhatsApp"),
-            (r"\btelegram\b", "Telegram"),
-            (r"\bgemini\b", "Gemini"),
-            (r"\bgoogle\s+places\b", "Google Places"),
-            (r"\bgmail\b", "Gmail"),
-            (r"\bgoogle\s+sheets\b", "Google Sheets"),
-            (r"\bgoogle\s+drive\b", "Google Drive"),
-        ]
-        cleaned = apply_replacements(srt_text, replacements)
-        cleaned_srt_path = workdir / "transcript.es.cleaned.srt"
-        cleaned_srt_path.write_text(cleaned, encoding="utf-8")
+        cleaned_srt_path, dub_srt_path = write_cleaned_and_dub_srt(srt_path, workdir)
     else:
         existing_cleaned_srt = workdir / "transcript.es.cleaned.srt"
         cleaned_srt_path = existing_cleaned_srt if existing_cleaned_srt.exists() else None
+        existing_dub_srt = workdir / "transcript.es.dub.srt"
+        dub_srt_path = existing_dub_srt if existing_dub_srt.exists() else cleaned_srt_path
 
     if args.prepare_english:
         if not cleaned_srt_path:
@@ -422,7 +401,7 @@ def main():
         if not required_english_assets.issubset(english_assets):
             english_assets = prepare_english_assets(
                 video=video_out,
-                spanish_srt=cleaned_srt_path,
+                spanish_srt=dub_srt_path or cleaned_srt_path,
                 out_dir=workdir,
                 voice=Path(args.english_voice),
                 voice_text_file=Path(args.english_voice_text_file) if args.english_voice_text_file else None,

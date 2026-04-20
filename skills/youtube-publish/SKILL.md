@@ -5,7 +5,12 @@ description: "End-to-end YouTube publishing workflow using ordered scripts: prep
 
 # YouTube Publish (Scripted Flow)
 
-Use scripts in order. Stop for validation after copy + thumbnail generation. Ask exact publish time if not provided.
+Use scripts in order. Stop for validation after copy + thumbnail generation. If the user did not already specify them, ask up front for:
+- the exact publish day/time
+- whether they want English dubbing for YouTube
+- whether they also want the English X variant
+
+Rule: the English X variant depends on the English YouTube dubbing pack. It is valid to do English dubbing for YouTube without doing the English X variant, but not the other way around.
 
 ## Behavior rules for the agent
 
@@ -14,16 +19,20 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
 - **Technical Anchor (strict):** Every title must include at least one engineering keyword: `Orquestación`, `Despliegue`, `Infraestructura`, `Clean Architecture`, `Refactorización`, `Pipeline`, `Capa de Abstracción`.
 - **Title Derivation:** Do not ask for a title hint; derive it from the video stem and the technical density of the SRT.
 - **Scheduling:** If the user provides a publish time, resolve to exact `YYYY-MM-DD HH:MM` using system time and pass `--publish-at` + `--timezone`. Always determine and pass `--timezone`.
+- **Missing decisions:** If publish date/time, English YouTube dubbing, or English X dubbing were not explicitly provided, ask for them before starting the workflow.
 - **Content Generation Engine:** Titles, thumbnail ideas, description, chapters, and LinkedIn copy must be written by the same model executing this skill.
 - **English Variant:** When the user wants a multilingual YouTube version, always generate an English pack for the same video: translated transcript, English title, English description, and dubbed English audio.
 - **English Scope:** The English pack is for YouTube multi-language audio/localization only. Do not create English social posts unless the user explicitly asks for them.
+- **English X Dependency:** If the user wants the English X variant, that implies the English YouTube dubbing pack must also be produced first.
 - **Thumbnail Generation:** Generate 3 thumbnails using the presenter photo set. Default presenter is `antonio` (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). If the user indicates the video is from Nino, switch presenter to `nino` (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
 - **Reference Photos (strict):** For each generated thumbnail, always pass the 3 presenter images together as references. They are identity anchors (not fixed poses); the model is free to choose the best posture/composition.
-- **Thumbnail Engine:** Reuse `3rd-nano-banana-pro/scripts/generate_image.py` as the single image generation engine. Keep default model behavior (Flash). Only override model explicitly when requested.
+- **Thumbnail Engine:** Reuse `nano-banana-pro/scripts/generate_image.py` as the single image generation engine. Keep default model behavior (Flash). Only override model explicitly when requested.
 - **Thumbnail Creativity Rule:** Deliver 1 safer option + 2 exploratory options. Avoid producing near-duplicates. If an unconventional concept communicates better for that specific video, prioritize it.
+- **English Thumbnail Rule:** If the English YouTube dubbing pack is requested, once the user chooses the final thumbnail you must create an English-edited version of that same thumbnail by editing the selected image so its main headline text is in English instead of Spanish. Keep the composition, styling, and identity intact; only adapt the main headline text.
 - **Workflow:** Upload a private draft before generating copy so the video URL can be used in social text.
 - **Newsletter:** Disabled in this flow. Do not generate or schedule newsletter here.
 - **X Strategy:** Do not schedule/publish to X via PostFlow in this flow. X is handled as native video upload outside this step.
+- **X Variants:** The default X asset is the Spanish native video with the selected Spanish thumbnail embedded as the first 500ms. If the user requested the English X variant too, also build an English native X video using the English-dubbed video plus the English-edited thumbnail.
 - **Links:** In social posts, the comment must not be just the link; it must include a brief descriptive text inviting to watch (e.g., "Watch the full technical analysis here: https://...").
 - **Comment Sequence:** For final publish/update, always use this order: set video to `unlisted`, insert promo comment (`Domina la IA...`), then set final status (`private` with `publishAt` if scheduled, otherwise `private`).
 - **Schedule Decision Required:** Never publish without an explicit decision in `Programación (final)`: either a date `YYYY-MM-DD HH:MM` or `private`.
@@ -70,7 +79,9 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      ```bash
      python scripts/transcribe_parakeet.py --video <video> --out-dir <workdir>
      ```
-   - Outputs `transcript.es.cleaned.srt`.
+   - Outputs:
+     - `transcript.es.cleaned.srt`
+     - `transcript.es.dub.srt` (same transcript resegmented into more natural dubbing units)
    - After transcription, copy the SRT to the vault transcripts folder:
      ```bash
      cp <workdir>/transcript.es.cleaned.srt ~/Documents/aipal/transcripts/<YYYY-MM-DD>-<slug>.srt
@@ -78,7 +89,7 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
    - Use today's date and the video slug from step 1 as the filename.
 
 4. **Prepare English dubbing assets (when multilingual output is requested)**
-   - Read `<workdir>/transcript.es.cleaned.srt` and create:
+   - Read `<workdir>/transcript.es.dub.srt` when present (fallback: `transcript.es.cleaned.srt`) and create:
      - `<workdir>/transcript.en.srt` translated to natural English while preserving timestamps.
      - `<workdir>/title.en.txt` with 1 English YouTube title for the dubbed track.
      - `<workdir>/description.en.txt` with 1 English YouTube description for the dubbed track.
@@ -92,6 +103,8 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
    - Save at least:
      - `<workdir>/dubbed_audio.en.wav`
      - `<workdir>/dubbed_video.en.mp4` if the dubbing pipeline also muxes the video
+     - `<workdir>/title.en.txt`
+     - `<workdir>/description.en.txt`
    - Keep the English title/description technically faithful to the Spanish source, not marketing-localized beyond what is needed for natural English.
    - The goal is to run Voxtral through the same timed dubbing pipeline as the other models, not a manual narration-only shortcut.
 
@@ -181,6 +194,7 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
     - LinkedIn post (edit if needed).
     - English title (edit if needed).
     - English description (edit if needed).
+   - After the user confirms the final thumbnail and the English YouTube dubbing pack is enabled, create the English-edited thumbnail before any final X-video build.
 
 8. **Update YouTube**
    - Command:
@@ -194,6 +208,12 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      python scripts/build_x_native_video.py --video <video.mp4> --thumbnail <thumb.png> --output <workdir>/video-x.mp4 --intro-ms 500
      ```
    - Result: a version ready for X where the first 500ms shows the selected thumbnail as a static cover frame.
+   - Always build the Spanish X variant from the original Spanish video + final Spanish thumbnail.
+   - If the user requested the English X variant too, also build:
+     ```bash
+     python scripts/build_x_native_video.py --video <workdir>/dubbed_video.en.mp4 --thumbnail <english-thumb.png> --output <workdir>/video-x.en.mp4 --intro-ms 500
+     ```
+   - The English X variant must use the English-edited thumbnail, not the Spanish one.
 
 10. **Schedule socials (PostFlow, excluding X)**
    - Command:
@@ -208,3 +228,4 @@ Use scripts in order. Stop for validation after copy + thumbnail generation. Ask
      - Enable monetization (not supported via API).
      - Add End Screens (not supported via API).
      - If multilingual output was requested, upload the English dubbed audio track and apply the English title/description in the YouTube Studio multi-language UI.
+     - If the English X variant was requested, remember that there should now be two native X assets ready: the Spanish `video-x.mp4` and the English `video-x.en.mp4`.

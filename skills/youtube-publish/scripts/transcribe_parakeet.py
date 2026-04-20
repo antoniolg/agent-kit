@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import argparse
-import re
 import subprocess
 from pathlib import Path
+
+from dub_srt_utils import write_cleaned_and_dub_srt
 
 
 def run(cmd):
@@ -10,28 +11,6 @@ def run(cmd):
     if result.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{result.stderr}")
     return result.stdout
-
-
-def apply_replacements(text):
-    replacements = [
-        (r"\bcloudbot\b", "ClawdBot"),
-        (r"\bclawdbot\b", "ClawdBot"),
-        (r"\bcloudboat\b", "ClawdBot"),
-        (r"\bjust\s*do\s*it\b", "justdoit"),
-        (r"\bcloud\s+opus\b", "Claude Opus"),
-        (r"\bwhatsapp\b", "WhatsApp"),
-        (r"\btelegram\b", "Telegram"),
-        (r"\bgemini\b", "Gemini"),
-        (r"\bgoogle\s+places\b", "Google Places"),
-        (r"\bgmail\b", "Gmail"),
-        (r"\bgoogle\s+sheets\b", "Google Sheets"),
-        (r"\bgoogle\s+drive\b", "Google Drive"),
-    ]
-    for pattern, repl in replacements:
-        text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
-    text = re.sub(r"\b[xX]\b", "X", text)
-    return text
-
 
 def main():
     parser = argparse.ArgumentParser(description="Transcribe with Parakeet MLX and clean text")
@@ -57,12 +36,8 @@ def main():
     if not srt_path.exists():
         raise FileNotFoundError("Parakeet SRT not found")
 
-    text = srt_path.read_text(encoding="utf-8")
-    cleaned = apply_replacements(text)
-
-    cleaned_path = out_dir / "transcript.es.cleaned.srt"
-    cleaned_path.write_text(cleaned, encoding="utf-8")
-
+    cleaned_path, dub_path = write_cleaned_and_dub_srt(srt_path, out_dir)
+    print(f"Dub-optimized SRT: {dub_path}")
     print(str(cleaned_path))
 
 

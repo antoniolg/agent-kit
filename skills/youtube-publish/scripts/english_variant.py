@@ -2,10 +2,13 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+from dub_srt_utils import cues_to_srt, parse_srt_text
 
 
 DEFAULT_DUBBER_SCRIPT = Path.home() / "Projects/antoniolg/youtube-dubber/scripts/dub_voxtral.py"
@@ -140,6 +143,61 @@ def translate_srt(
     return english_srt
 
 
+def compact_english_srt_in_place(
+    english_srt: Path,
+    *,
+    max_chars_per_second: float = 17.0,
+) -> Path:
+    cues = parse_srt_text(english_srt.read_text(encoding="utf-8"))
+    compact_rules = [
+        (r"^\s*Okay,\s+", ""),
+        (r"^\s*Well,\s+", ""),
+        (r"^\s*So,\s+", ""),
+        (r"\bwe are going to\b", "we'll"),
+        (r"\bwe're going to\b", "we'll"),
+        (r"\bI am going to\b", "I'll"),
+        (r"\bI'm going to\b", "I'll"),
+        (r"\bit is\b", "it's"),
+        (r"\bthat is\b", "that's"),
+        (r"\bdo not\b", "don't"),
+        (r"\bcannot\b", "can't"),
+        (r"\bwe have\b", "we've"),
+        (r"\bI have\b", "I've"),
+        (r"\blet us\b", "let's"),
+        (r"\bwhat I want to do is\b", "I want to"),
+        (r"\bwhat we're going to do is\b", "we'll"),
+    ]
+
+    compacted = []
+    for cue in cues:
+        text = cue.text
+        duration_s = max(0.1, cue.duration_ms / 1000)
+        chars_per_second = len(text) / duration_s
+        if chars_per_second > max_chars_per_second:
+            for pattern, repl in compact_rules:
+                updated = re.sub(pattern, repl, text, flags=re.IGNORECASE)
+                updated = re.sub(r"\s+", " ", updated).strip(" ,")
+                if updated != text:
+                    text = updated
+                    chars_per_second = len(text) / duration_s
+                if chars_per_second <= max_chars_per_second:
+                    break
+
+        compacted.append(
+            cue.__class__(
+                cue_id=cue.cue_id,
+                start=cue.start,
+                end=cue.end,
+                start_ms=cue.start_ms,
+                end_ms=cue.end_ms,
+                text=text,
+            )
+        )
+
+    english_srt.write_text(cues_to_srt(compacted), encoding="utf-8")
+    return english_srt
+
+
 def dub_english_audio(
     *,
     video: Path,
@@ -201,6 +259,7 @@ def prepare_english_assets(
 
     transcript_en_path = out_dir / "transcript.en.srt"
     translate_srt(spanish_srt, transcript_en_path, auth_key)
+    compact_english_srt_in_place(transcript_en_path)
 
     title_en_path = out_dir / "title.en.txt"
     if spanish_title:
