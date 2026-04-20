@@ -1,0 +1,4 @@
+interface:
+  display_name: "X Republish"
+  short_description: "Republish X posts through PostFlow"
+  default_prompt: "Use $x-republish to turn a published X post into a draft or scheduled post for selected PostFlow accounts."
