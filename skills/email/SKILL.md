@@ -38,6 +38,7 @@ scripts/email-inbox
 5) If the user says "archive all except 141, 144" (or similar), interpret "all" as all items from the last shown snapshot, not every message currently in the live inbox. This avoids archiving new emails that arrived after the list was shown.
 6) Only refresh/reload the inbox before acting when the user explicitly asks for it, or when you no longer trust the saved snapshot.
 7) Propose recommended actions (archive/open/reply/wait) using your own judgment; ask for confirmation before acting.
+8) When you execute archive actions and want to verify the result, do it sequentially: wait for the archive command to finish, then refresh the inbox. Do not run archive and refresh in parallel, or you may read a stale state and draw the wrong conclusion.
 
 Helpers (from the skill folder):
 - `scripts/email-open --index <n>` (Gmail/iCloud) opens and writes `/tmp/email-open.json`.

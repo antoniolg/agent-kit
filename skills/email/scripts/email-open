@@ -140,6 +140,50 @@ def _get_headers(payload):
             out[name] = h.get("value", "")
     return out
 
+
+def _extract_gmail_attachments(msg_data):
+    attachments = []
+    for entry in msg_data.get("attachments", []) or []:
+        filename = str(entry.get("filename") or "").strip()
+        if not filename:
+            continue
+        attachments.append(
+            {
+                "filename": filename,
+                "mime_type": entry.get("mimeType") or "",
+                "size": entry.get("size") or 0,
+                "size_human": entry.get("sizeHuman") or "",
+                "attachment_id": entry.get("attachmentId") or "",
+            }
+        )
+
+    if attachments:
+        return attachments
+
+    def walk(parts):
+        for part in parts or []:
+            yield part
+            yield from walk(part.get("parts", []))
+
+    payload = msg_data.get("message", {}).get("payload", {})
+    for part in walk(payload.get("parts", [])):
+        filename = str(part.get("filename") or "").strip()
+        body = part.get("body") or {}
+        attachment_id = body.get("attachmentId") or ""
+        if not filename or not attachment_id:
+            continue
+        attachments.append(
+            {
+                "filename": filename,
+                "mime_type": part.get("mimeType") or "",
+                "size": body.get("size") or 0,
+                "size_human": "",
+                "attachment_id": attachment_id,
+            }
+        )
+
+    return attachments
+
 def main():
     parser = argparse.ArgumentParser(description="Open a Gmail email by inbox index")
     parser.add_argument("--index", type=int, required=True, help="Index from inbox list")
@@ -196,11 +240,18 @@ def main():
         msg_data = json.loads(msg_res.stdout)
         headers = _get_headers(msg_data)
         body = msg_data.get("body", "").strip()
+        attachments = _extract_gmail_attachments(msg_data)
 
         print(f"From: {headers.get('from','').strip()}")
         print(f"To: {headers.get('to','').strip()}")
         print(f"Date: {headers.get('date','').strip()}")
         print(f"Subject: {headers.get('subject','').strip()}")
+        if attachments:
+            print("Attachments:")
+            for attachment in attachments:
+                size = attachment.get("size_human") or str(attachment.get("size") or "")
+                size_label = f" ({size})" if size else ""
+                print(f"- {attachment.get('filename','')}{size_label}")
         print("")
         print(body)
 
@@ -213,6 +264,7 @@ def main():
                 "message_id": message_id,
                 "headers": headers,
                 "body": body,
+                "attachments": attachments,
             }
             Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
             with open(args.json_out, "w", encoding="utf-8") as f:
@@ -272,6 +324,7 @@ def main():
                 "uid": uid,
                 "headers": headers,
                 "body": body,
+                "attachments": [],
             }
             Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
             with open(args.json_out, "w", encoding="utf-8") as f:
