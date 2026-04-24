@@ -21,7 +21,7 @@ pip install markdown-it-py[plugins] weasyprint reportlab PyPDF2
 
 ## Rutas clave
 
-- **Logo DevExpert:** `assets/devexpert-logo.png` (relativo a la carpeta de la skill)
+- **Logo DevExpert:** `assets/devexpert-logo.png` (logo horizontal completo, relativo a la carpeta de la skill)
 - **Output por defecto:** `~/Documents/aipal/40-archive/`
 
 ## Script de generación
@@ -269,3 +269,4 @@ def gen_pdf(input_md, output_pdf, add_logo=True, logo_path=None):
 - Los saltos de línea simples se respetan (`breaks=True`)
 - Las tablas Markdown se renderizan con estilo neutro
 - Las imágenes referenciadas en el Markdown se resuelven con `base_url` del fichero de entrada
+- Para propuestas DevExpert, usa siempre el logo horizontal completo incluido en `assets/devexpert-logo.png`, no el icono cuadrado.
