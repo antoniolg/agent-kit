@@ -37,9 +37,9 @@ postflow --json schedule list --from YYYY-MM-DDTHH:MM:SSZ --to YYYY-MM-DDTHH:MM:
 
 **YouTube** (vídeos publicados o programados):
 ```bash
-python list_videos.py --limit 10 --json
+/Users/antonio/.venvs/youtube-publish/bin/python /Users/antonio/Projects/antoniolg/agent-kit/skills/youtube-publish/scripts/list_videos.py --limit 10 --json
 ```
-Usa el script `list_videos.py` incluido en la skill `youtube-publish` (carpeta `scripts/`).
+Usa el script `list_videos.py` incluido en la skill `youtube-publish` (carpeta `scripts/`) con el venv dedicado `~/.venvs/youtube-publish`, que incluye `google-api-python-client`, `google-auth-oauthlib` y `google-auth-httplib2`.
 
 El flag `--json` devuelve título, descripción, fecha, estado y URL. La descripción indica quién ha grabado el vídeo (Antonio o Nino) y de qué trata exactamente.
 
