@@ -51,6 +51,8 @@ Usar 100 bookmarks para asegurar cobertura del rango completo. Filtrar por fecha
 
 ### 2. Proponer lista de temas al usuario
 
+Antes de redactar texto final firmado por Antonio, aplicar la skill `social-copy-guardrails` a toda la newsletter, no solo a la intro. La newsletter debe sonar como Antonio, no como un informe editorial de IA.
+
 Primero, analizar si hay un **tema dominante** en la semana:
 - ¿Hay un tema que aparece en múltiples posts propios, bookmarks y conversaciones?
 - ¿Se ha hablado de lo mismo desde varios ángulos (artículo, podcast, reflexiones)?
@@ -62,7 +64,7 @@ Presentar el contenido en DOS bloques:
 Organizado por secciones (ver estructura más abajo):
 - **El tema de la semana** (si hay tema dominante) - agrupa contenido propio y de terceros sobre ese tema
 - Vídeo de la semana
-- Lo que ha pasado (contenido propio que no entre en el tema de la semana)
+- Lo que ha pasado (solo contenido propio que no entre en el tema de la semana; si se solapa con el tema dominante, no crear esta sección)
 - Lecturas recomendadas (bookmarks de terceros que no entren en el tema de la semana)
 - Reflexión de la semana (si hay)
 - Novedades de modelos (si hay - buscar en bookmarks lanzamientos de modelos)
@@ -126,6 +128,10 @@ listmonk campaigns schedule <id> \
 ### Estructura A: Con tema dominante de la semana
 
 Usar cuando hay un tema claro que ha dominado la semana. El bloque "El tema de la semana" se escribe de forma **narrativa**, con los enlaces integrados en el texto (no al final de cada párrafo).
+
+En esta estructura, no añadir una sección separada de "Lo que ha pasado esta semana" salvo que haya contenido propio relevante que no encaje dentro del tema dominante. Si Codex, un vídeo, una reflexión, un artículo o un lanzamiento forman parte de la misma narrativa, integrarlos dentro de "El tema de la semana" para evitar solapes.
+
+El texto debe evitar muletillas de reencuadre repetidas (`no es X, sino Y`, `lo relevante no es...`, `la pelea interesante...`) y frases que inventen una sospecha que Antonio no planteó (`no es una demo de juguete`, `no solo mirarlo desde el titular`). Si hace falta explicar un tradeoff, hacerlo desde la prueba concreta y la consecuencia operativa.
 
 ```markdown
 ¡Hola DevExpert!
