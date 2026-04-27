@@ -4,3 +4,4 @@ skills/gen-pdf/assets/
 **/__pycache__/
 *.pyc
 .DS_Store
+AGENTS.md
