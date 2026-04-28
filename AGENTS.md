@@ -11,6 +11,8 @@ Personal Codex operating rules.
 - Guardrails: use `trash` for deletes.
 - Bugs: add regression test when it fits.
 - Keep files <~500 LOC; split/refactor as needed.
+- Architecture: prefer scalable, testable, maintainable layered designs, adapted
+  to the project's complexity and the technology's best practices.
 - Commits: Conventional Commits (`feat|fix|refactor|build|ci|chore|docs|style|perf|test`).
 - CI: `gh run list/view` (rerun/fix til green).
 - Prefer end-to-end verify; if blocked, say what’s missing.
