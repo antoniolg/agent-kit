@@ -1,157 +1,147 @@
 ---
 name: social-copy-guardrails
-description: Enforce Antonio's house style when drafting or rewriting Spanish copy for X, LinkedIn, article teasers, and newsletter intros. Use whenever generating social posts or article companion copy that must sound like him and respect his hard constraints.
+description: Enforce Antonio's real Spanish social voice when drafting or rewriting X, LinkedIn, article teaser, and newsletter intro copy. Use whenever copy must sound like Antonio and avoid obvious AI writing.
 ---
 
 # Social Copy Guardrails
 
-This is a living skill.
+This is a living skill for writing social copy in Antonio's voice.
 
-If Antonio corrects any text generated with this skill, update this skill so the correction becomes part of the workflow from that point on.
-
-Do not treat corrections as one-off preferences for the current turn.
-Treat them as changes to the skill.
+If Antonio corrects any text generated with this skill, update this skill or one
+of its resources so the correction becomes part of the workflow from that point
+on. Do not treat corrections as one-off preferences for the current turn.
 
 Use this skill whenever the task involves:
 - writing a new X or LinkedIn post in Spanish
 - rewriting or polishing an existing social post
-- preparing social teaser copy for an article
+- preparing social teaser copy for an article or video
 - writing the intro text for an X article or newsletter post
 
-This skill is not for planning content strategy.
-It is for writing the actual copy without drifting into generic AI voice.
+This skill is not the default tool for content strategy. It is for turning a real
+idea, experience, draft, or scene into copy that sounds like Antonio.
 
-## Core principle
+## Core Objective
 
-If the idea is good but the wording breaks the house rules, the output is still wrong.
+Optimize for voice first.
 
-Treat the constraints below as hard constraints, not soft preferences.
-If a draft violates them, rewrite it before returning anything.
+The default goal is not maximum authority, maximum reach, or a perfect creator
+post. The default goal is: Antonio should be able to publish the result after
+changing at most two or three things.
 
-Before drafting or rewriting copy with this skill, read:
+Good copy here should feel like:
+- a real thought from Antonio
+- grounded in something he has done, seen, or tested
+- slightly imperfect in a human way
+- specific enough to be useful
+- free of obvious AI-cadence
+
+If a draft sounds strategically correct but not like Antonio, it is wrong.
+
+## Required Context
+
+Before drafting or rewriting copy, read:
+- `resources/copy-workflow.md`
 - `resources/voice-profile.md`
-- `resources/ai-writing-tropes.md`
-- `~/Documents/aipal/10-areas/contenido/patrones-redes.md`
+- `resources/recent-manual-x-corpus.md`
+- `resources/feedback-bank.md`
 
-Use it as an anti-slop filter.
-Apply it with judgment:
-- avoid stacking multiple AI-writing tells in the same piece
-- prefer direct, specific phrasing over polished generic phrasing
-- if a trope appears once naturally and the line is genuinely strong, do not weaken it just to satisfy the checklist mechanically
+Use `resources/ai-writing-tropes.md` only as a final lint reference when the
+draft feels too polished, too symmetrical, or too obviously generated. Do not
+load it as primary generative context.
 
-## Hard constraints
+Do not read `~/Documents/aipal/10-areas/contenido/patrones-redes.md` by default.
+Only use that strategy file when Antonio explicitly asks for distribution,
+performance, calendar, positioning, or content-system decisions.
 
-### 1. No default hedge words
+## Default Workflow
 
-Do not default to softeners such as:
-- `creo`
-- `cada vez más`
-- `me parece`
+Follow the workflow in `resources/copy-workflow.md`.
 
-Only use them when they add a real and deliberate nuance.
-If the sentence works without them, remove them.
+The short version:
+1. Preserve Antonio's source phrases before inventing new phrasing.
+2. Classify the piece by mode: experience, opinion, practical tip, video teaser,
+   technical recap, launch, or article/newsletter companion.
+3. If Antonio gives a raw idea and does not ask for the final post directly,
+   return 2-3 short angles first, not full copy.
+4. Once Antonio chooses an angle, return one polished text.
+5. Run the final lint before returning anything.
 
-### 2. Lists must be easy to scan
+If Antonio says something like "escríbelo ya", "dame el texto", "programalo",
+"publícalo", or provides a nearly final draft, skip the angle step and produce
+the final text directly.
 
-When a list improves the copy:
-- prefer `✅`, `❌`, `⚠️`, or `👉`
-- do not use typographic bullets like `•`
-- use `❌` for negative items, failure modes, or fragility examples
-- use `✅` for positive items, working parts, or recommended elements
+## Hard Constraints
 
-### 3. List items must use normal sentence case
+### 1. Preserve the real input
 
-In lists:
-- capitalize only the first letter of the first word
-- do not use Title Case
-- do not make every line sound like a slide deck heading
+Do not erase Antonio's wording just to make the copy smoother.
 
-Good:
-- `✅ Validación por commit`
+Before drafting, identify the phrases, hesitations, observations, or exact
+turns that should survive. If the input contains a human line like "no sé cómo
+contarlo", "me dejó impresionado", "me cuesta bastante poco detectar que es
+suyo", or "pues eso", preserve that kind of texture unless it clearly hurts the
+post.
 
-Bad:
-- `✅ Validación Por Commit`
+### 2. Do not inflate experiences into authority plays
 
-### 4. Avoid AI-template cadence
-
-Do not let multiple posts sound like they come from the same mold.
-
-Vary:
-- rhythm
-- sentence length
-- paragraph shape
-- closing style
-
-Avoid the polished-neutral LinkedIn-robot tone.
-
-### 5. Open with the thesis, not with warm-up
-
-Start as close as possible to the real point.
-Do not spend the opening lines arriving at the idea.
-Lead with the claim, tension, or scene.
-
-### 6. Do not over-explain obvious transitions
-
-Avoid filler bridges like:
-- `La idea es sencilla`
-- `Básicamente`
-- `En realidad`
-- `Lo importante aquí es`
-
-unless they genuinely sharpen the point.
-
-### 7. Keep the Spanish natural
-
-Write in natural Spanish from someone technical and opinionated.
-Not academic.
-Not ad-copy smooth.
-Not generic creator-economy language.
-
-### 8. Technical posts should not sound like reviews
-
-When the topic is a library, framework, model, benchmark, or launch:
-- do not drift into "analysis piece" tone
-- explain the technical point in plain language
-- prefer "this is what it does" / "this is the catch" over academic framing
-- if there is hype, separate clearly between the base product and the benchmark-enhanced path
-- if benchmarks need caveats, explain them so a reader who will never open the eval scripts still understands the practical implication
-
-### 9. Video companion posts should not close the loop
-
-When the post is meant to send readers to a video:
-- create tension around the problem, setup, or experiment
-- do not expose the final conclusion if that removes the reason to watch
-- make the reader curious about the outcome, tradeoffs, or failure modes
-- still provide enough concrete context to avoid vague teaser copy
-
-### 10. Do not overuse contrast framing
-
-Avoid repeating the same analytical contrast cadence:
-- `no es X, sino Y`
-- `lo relevante no es X, es Y`
-- `lo que importa de esto no es X, sino Y`
-- `la pregunta útil no es X, sino Y`
-- `la gracia no está en X, está en Y`
-
-One contrast can work when it genuinely sharpens the thesis. Repeating it across a newsletter, article intro, or post makes the copy sound generated and unlike Antonio.
+When the raw material is a personal experiment, workflow session, or anecdote,
+do not force it into a lesson about authority, positioning, or what it proves
+for the whole industry.
 
 Prefer:
-- a concrete scene from Antonio's work
-- a direct observation
-- a specific consequence
-- a plain-language catch or tradeoff
+- what Antonio did
+- what happened
+- what felt useful, surprising, awkward, or still limited
+- a grounded note about where it fits in real work
 
-Good:
-- `Esta semana he usado Codex para bastante más que programar: revisar sistemas, preparar contenido, operar herramientas y cerrar tareas que normalmente acabarían desperdigadas.`
+Avoid endings like:
+- `esto demuestra la profundidad que se puede alcanzar`
+- `esto cambia el ciclo de feedback`
+- `poder delegar elimina la friccion`
+- `asi es como deberiamos trabajar a partir de ahora`
 
-Bad:
-- `Lo importante de Codex no es que programe mejor, sino que se convierte en una capa de trabajo completa.`
+### 3. Do not over-polish
 
-### 11. Avoid invented skepticism
+Antonio's recent manual X posts often work because they feel like thinking in
+public. Keep some natural asymmetry when it belongs to the idea.
 
-Do not imply Antonio or the reader assumed a tool was a toy, a fake demo, or only headline material unless Antonio explicitly framed it that way.
+Avoid making every post:
+- thesis first
+- perfectly balanced
+- wrapped in a clean framework
+- closed with a grand takeaway
 
-Avoid recurring phrases like:
+Some posts can start with uncertainty, a scene, or a conversational admission.
+
+### 4. Avoid strategy contamination
+
+Do not turn every post into positioning.
+
+Words like "autoridad", "impacto", "referente", "comunidad", "tesis", and
+"posicionamiento" belong to strategy conversations, not to most publishable
+copy. If those ideas are not in Antonio's input, do not introduce them.
+
+### 5. No AI-template cadence
+
+Avoid stacking common AI tells:
+- `no es X, sino Y`
+- `lo importante no es X, es Y`
+- `la pregunta útil no es X`
+- `esto demuestra...`
+- `la clave está en...`
+- `en un mundo donde...`
+- `lo que nadie está viendo...`
+- `no se trata solo de...`
+
+One contrast can work when Antonio used it or when it genuinely sharpens the
+point. Repeated contrast framing makes the copy sound generated.
+
+### 6. Do not invent skepticism
+
+Do not imply Antonio assumed a tool was a toy, fake demo, headline, or gimmick
+unless he explicitly framed it that way.
+
+Avoid recurring assistant-default lines like:
 - `no es una demo de juguete`
 - `no hace falta convertirlo todo en una gran demo`
 - `no solo mirarlo desde el titular`
@@ -159,101 +149,90 @@ Avoid recurring phrases like:
 - `la pelea interesante está en...`
 - `me interesaba especialmente ver cómo se comportaba...`
 
-These lines sound like assistant-default framing. They add a defensive stance Antonio did not necessarily take.
+### 7. Use natural Spanish
 
-Prefer concrete, neutral wording:
-- what Antonio tested
-- what happened in the test
-- where the tradeoff appeared
-- what he wants to keep investigating
+Write like a Spanish-speaking software developer who lives inside these tools.
+Not academic, not corporate, not creator-economy smooth.
 
-Good:
-- `Lo probé con tareas largas porque ahí se ve mejor si mantiene contexto, si usa bien las herramientas y si el coste de ejecutarlo en local compensa.`
+Allowed when natural:
+- `pues`
+- `a ver`
+- `en lo personal`
+- `seguramente`
+- `yo qué sé`
+- `es curioso`
+- `de locos`
+- `me cuesta bastante`
 
-Bad:
-- `Qwen 3.6 no es una demo de juguete, pero merece probarlo en condiciones reales y no solo mirarlo desde el titular.`
+Do not sprinkle these mechanically. Use them only where they fit.
 
-### 12. Do not expose internal tooling to readers
+### 8. Lists must feel like Antonio's lists
 
-When writing subscriber-facing copy, avoid mentioning internal publishing or ops tools unless they are part of the actual story for the audience.
+Antonio often uses numbered emoji lists naturally, especially for practical or
+opinion posts.
 
-For example, do not mention:
-- `Listmonk`
-- campaign IDs
-- draft mechanics
-- internal automation plumbing
+When a list improves the copy:
+- `1️⃣`, `2️⃣`, `3️⃣` are fine for ordered points
+- `👉` is fine for simple examples
+- `✅`, `❌`, and `⚠️` are fine when they match the meaning
+- do not use typographic bullets like `•`
+- use normal sentence case, not Title Case
 
-Use reader-facing wording instead:
-- `preparar esta newsletter`
-- `dejar un borrador revisable`
-- `cerrar una tarea que normalmente quedaría desperdigada`
+Do not force a list if the idea works better as prose.
 
-## Medium constraints
+### 9. Technical posts should not sound like product reviews
 
-These are not absolute, but should usually hold:
-- prefer one strong thesis over three medium ones
-- if the post includes a list, make each item concrete
-- if there is a CTA, it should feel like a natural consequence of the post
-- article teaser copy should create curiosity without summarizing the whole piece
-- if the post is about tooling, close with what changes in the work, not just what launched
-- when critiquing hype, avoid sounding defensive or "debunk thread"; explain the useful part first, then the caveats
+When the topic is a library, framework, model, benchmark, launch, or repo:
+- explain what Antonio tried
+- name the practical effect
+- include uncertainty if the test is early
+- avoid academic benchmark-review tone
+- avoid pretending the conclusion is final when Antonio is still exploring
 
-## Default workflow
+### 10. Video companion posts should not close the loop
 
-### 1. Write the rough version fast
+When the post is meant to send readers to a video:
+- create tension around the setup, experiment, or result
+- do not expose the final conclusion if that removes the reason to watch
+- avoid marketing-teaser language
+- give enough concrete context that it does not feel vague
 
-Start from the thesis, scene, or tension.
-Do not optimize the first sentence for elegance.
-Optimize it for clarity and force.
+### 11. Do not expose internal tooling unless it is the story
 
-### 2. Run a constraint pass
+For subscriber-facing copy, avoid mentioning internal publishing or ops tools
+unless they are part of the actual story for the audience.
 
-Before returning, check:
-- did I use `creo`, `cada vez más`, or `me parece` lazily?
-- if there is a list, does it use `✅`/`❌`/`⚠️`/`👉`?
-- do list items use normal sentence case?
-- does the cadence sound templated?
-- does the opening reach the point fast enough?
-- if the piece mentions benchmarks or evals, would a smart reader understand the caveat without having to read the benchmark docs?
+Use reader-facing wording instead of internal implementation detail.
 
-### 3. Rewrite if needed
+## Output Contract
 
-If any answer is yes, rewrite.
-Do not apologize.
-Just fix it.
-
-## What this skill should protect against
-
-- copy that sounds generated from the same place
-- soft openings that dilute the thesis
-- clean but lifeless posts
-- overuse of recurring verbal tics
-- pretty formatting with weak signal
-
-## Output expectations
-
-When the user asks for copy:
-- return the copy directly unless analysis was requested
+When Antonio asks for copy:
+- return the copy directly unless he asked for analysis or angles
+- if in angle-selection mode, return only 2-3 concise angles
+- after an angle is chosen, return one final text, not variants
 - keep explanations short
 - do not defend the draft unless asked
 
-## Updating this skill
+When Antonio provides his own draft:
+- preserve its structure and intent by default
+- edit conservatively
+- do not rewrite the whole thing unless he asks
 
-If Antonio corrects:
-- tone
-- structure
-- recurring phrases
-- list formatting
-- cadence
-- how technical nuance should be translated into plain-language copy
+## Updating This Skill
 
-then update this skill so the correction becomes enforceable next time.
+If Antonio corrects tone, structure, recurring phrases, list formatting, cadence,
+or technical nuance:
+- add the correction to `resources/feedback-bank.md`
+- update `resources/voice-profile.md` if it changes the durable voice model
+- add a positive or negative example to `resources/recent-manual-x-corpus.md`
+  only when it is useful as future training context
 
-## Good outcome
+## Good Outcome
 
 A good output:
-- sounds like Antonio
-- reaches the point quickly
-- is easy to scan
-- does not use lazy hedge phrases
-- does not feel like a generic AI post
+- sounds like Antonio wrote it
+- keeps the live idea intact
+- is useful without sounding like a lesson plan
+- may be imperfect in a human way
+- avoids obvious AI writing at a glance
+- does not turn every experience into a thesis about the future of software
