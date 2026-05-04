@@ -40,6 +40,17 @@ def load_config(path: str) -> dict:
     return data or {}
 
 
+def require_language_config(config: dict) -> tuple[str, str]:
+    default_language = str(config.get("default_language", "") or "").strip()
+    default_audio_language = str(config.get("default_audio_language", "") or "").strip()
+    if not default_language or not default_audio_language:
+        raise ValueError(
+            "Missing language config. Set both default_language and "
+            "default_audio_language in ~/.config/youtube-publish/config.yaml."
+        )
+    return default_language, default_audio_language
+
+
 def resolve_promo_line(config: dict) -> str:
     env_line = os.environ.get("YOUTUBE_PROMO_LINE")
     cfg_line = config.get("promo_line") if isinstance(config, dict) else None
@@ -295,8 +306,7 @@ def main():
         notify_subscribers = True
     if args.no_notify_subscribers:
         notify_subscribers = False
-    default_language = config.get("default_language")
-    default_audio_language = config.get("default_audio_language")
+    default_language, default_audio_language = require_language_config(config)
 
     snippet = {
         "title": args.title,
@@ -306,10 +316,8 @@ def main():
         snippet["tags"] = tags
     if category_id:
         snippet["categoryId"] = str(category_id)
-    if default_language:
-        snippet["defaultLanguage"] = default_language
-    if default_audio_language:
-        snippet["defaultAudioLanguage"] = default_audio_language
+    snippet["defaultLanguage"] = default_language
+    snippet["defaultAudioLanguage"] = default_audio_language
 
     status = {
         "privacyStatus": privacy_status,
