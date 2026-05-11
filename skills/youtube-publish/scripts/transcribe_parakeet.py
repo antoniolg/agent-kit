@@ -16,6 +16,9 @@ def main():
     parser = argparse.ArgumentParser(description="Transcribe with Parakeet MLX and clean text")
     parser.add_argument("--video", required=True, help="Video path")
     parser.add_argument("--out-dir", required=True, help="Output directory")
+    parser.add_argument("--max-words", type=int, default=14, help="Max words per subtitle sentence")
+    parser.add_argument("--max-duration", type=float, default=5.2, help="Max subtitle sentence duration in seconds")
+    parser.add_argument("--silence-gap", type=float, default=0.35, help="Split at silence gaps in seconds")
     args = parser.parse_args()
 
     video_path = Path(args.video)
@@ -29,6 +32,12 @@ def main():
         str(out_dir),
         "--output-format",
         "srt",
+        "--max-words",
+        str(args.max_words),
+        "--max-duration",
+        str(args.max_duration),
+        "--silence-gap",
+        str(args.silence_gap),
     ]
     run(cmd)
 

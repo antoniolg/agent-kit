@@ -49,6 +49,7 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
 - **Verification Gate:** After final update/scheduling, verify the real YouTube `privacyStatus` and `publishAt`, then verify PostFlow using `postflow schedule list --view posts` for the target date. Do not rely on guessed CLI commands.
 - **Final Asset Gate:** Before final handoff, confirm these expected artifacts exist when applicable: `content.md`, `.state/video_id.txt`, `.state/video_url.txt`, `images/final/thumb.es.png`, `video/video-x.es.mp4`, `transcripts/transcript.es.cleaned.srt`, and, for multilingual runs, `transcripts/transcript.en.srt`, `audio/dubbed.en.m4a`, `images/final/thumb.en.png`. If any required artifact is missing, create it or explicitly report why it is missing.
 - **Verification Artifacts:** Save machine-readable verification output under `.state/` whenever practical, for example `.state/youtube_verification.json` and `.state/postflow_verification.json`, so later checks do not depend only on chat history.
+- **Subtitle Readability:** Human-facing subtitles must be segmented for reading, not just copied from Parakeet. Transcribe with Parakeet segmentation controls first (`--max-words 14 --max-duration 5.2 --silence-gap 0.35` by default), then keep the post-processing readability splitter as a safety net. Prefer max ~2 lines, about 80-90 characters per cue, and avoid long 10+ second cues with full paragraphs. Keep the dubbing SRT separate because dubbing benefits from longer natural speech units.
 - **Workdir Organization:** Keep the workdir tidy and predictable. `content.md` is the human/editorial source of truth for all copy in Spanish and English. Technical state for scripts may live outside it, but must be isolated under `.state/`. Media artifacts must be grouped by type:
   - `.state/` for script state such as `video_id.txt`, `video_url.txt`, YouTube verification JSON, and PostFlow verification JSON.
   - `transcripts/` for all SRT files.
@@ -117,11 +118,13 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
 4. **Transcribe + clean**
    - Command:
      ```bash
-     python scripts/transcribe_parakeet.py --video <video> --out-dir <workdir>
+     python scripts/transcribe_parakeet.py --video <video> --out-dir <workdir> --max-words 14 --max-duration 5.2 --silence-gap 0.35
      ```
    - Outputs:
      - `<workdir>/transcripts/transcript.es.cleaned.srt`
      - `<workdir>/transcripts/transcript.es.dub.srt` (same transcript resegmented into more natural dubbing units)
+   - `transcript.es.cleaned.srt` is the user-facing subtitle file. It must be resegmented into readable cues before upload or translation. Do not use the long Parakeet raw cues directly for YouTube subtitles.
+   - `transcript.es.dub.srt` is only for dubbing and may use longer speech units.
    - If the transcription script writes SRTs at the workdir root, move them into `<workdir>/transcripts/` before continuing and use the organized paths from then on.
    - After transcription, copy the SRT to the vault transcripts folder:
      ```bash

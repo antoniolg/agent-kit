@@ -124,6 +124,96 @@ def clean_srt_text(raw_srt_text: str) -> str:
     return apply_replacements(raw_srt_text, GLOSSARY_REPLACEMENTS)
 
 
+def _split_text_for_subtitles(text: str, max_chars: int) -> list[str]:
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text or len(text) <= max_chars:
+        return [text] if text else []
+
+    parts = re.split(r"(?<=[.!?…:;])\s+", text)
+    chunks: list[str] = []
+    current = ""
+
+    def flush_words(value: str) -> None:
+        words = value.split()
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if line and len(candidate) > max_chars:
+                chunks.append(line)
+                line = word
+            else:
+                line = candidate
+        if line:
+            chunks.append(line)
+
+    for part in parts:
+        candidate = f"{current} {part}".strip()
+        if current and len(candidate) > max_chars:
+            flush_words(current)
+            current = part
+        else:
+            current = candidate
+
+    if current:
+        flush_words(current)
+    return chunks
+
+
+def resegment_cues_for_subtitles(
+    cues: list[Cue],
+    *,
+    max_chars: int = 88,
+    max_duration_ms: int = 5200,
+    min_duration_ms: int = 900,
+) -> list[Cue]:
+    readable: list[Cue] = []
+
+    for cue in cues:
+        if len(cue.text) <= max_chars and cue.duration_ms <= max_duration_ms:
+            readable.append(cue)
+            continue
+
+        by_text = _split_text_for_subtitles(cue.text, max_chars)
+        if not by_text:
+            continue
+
+        estimated_parts = max(1, round(cue.duration_ms / max_duration_ms))
+        part_count = max(len(by_text), estimated_parts)
+        if part_count <= 1:
+            readable.append(cue)
+            continue
+
+        if len(by_text) < part_count:
+            by_text = _split_text_for_subtitles(cue.text, max(38, max_chars // 2))
+            part_count = max(len(by_text), estimated_parts)
+
+        start_ms = cue.start_ms
+        cue_end_ms = cue.end_ms
+        span_ms = cue_end_ms - start_ms
+
+        for index, text_part in enumerate(by_text):
+            part_start = start_ms + round(span_ms * index / len(by_text))
+            part_end = start_ms + round(span_ms * (index + 1) / len(by_text))
+            if (
+                part_end - part_start < min_duration_ms
+                and index < len(by_text) - 1
+                and part_start + min_duration_ms < cue_end_ms
+            ):
+                part_end = part_start + min_duration_ms
+            readable.append(
+                Cue(
+                    cue_id=cue.cue_id,
+                    start=_ms_to_time(part_start),
+                    end=_ms_to_time(part_end),
+                    start_ms=part_start,
+                    end_ms=part_end,
+                    text=text_part,
+                )
+            )
+
+    return readable
+
+
 def _ends_with_strong_punctuation(text: str) -> bool:
     return bool(re.search(r"[.!?…:;][\"')\]]*$", text.strip()))
 
@@ -239,11 +329,12 @@ def resegment_cues_for_dubbing(
 def write_cleaned_and_dub_srt(raw_srt_path: Path, out_dir: Path) -> tuple[Path, Path]:
     raw_text = raw_srt_path.read_text(encoding="utf-8")
     cleaned_text = clean_srt_text(raw_text)
+    cleaned_cues = parse_srt_text(cleaned_text)
+    subtitle_cues = resegment_cues_for_subtitles(cleaned_cues)
 
     cleaned_path = out_dir / "transcript.es.cleaned.srt"
-    cleaned_path.write_text(cleaned_text, encoding="utf-8")
+    cleaned_path.write_text(cues_to_srt(subtitle_cues), encoding="utf-8")
 
-    cleaned_cues = parse_srt_text(cleaned_text)
     dub_cues = resegment_cues_for_dubbing(cleaned_cues)
     dub_path = out_dir / "transcript.es.dub.srt"
     dub_path.write_text(cues_to_srt(dub_cues), encoding="utf-8")

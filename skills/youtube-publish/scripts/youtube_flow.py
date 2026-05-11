@@ -155,6 +155,12 @@ def transcribe_parakeet(video_path: Path, workdir: Path):
         str(workdir),
         "--output-format",
         "srt",
+        "--max-words",
+        "14",
+        "--max-duration",
+        "5.2",
+        "--silence-gap",
+        "0.35",
     ]
     run(cmd)
     # parakeet outputs {filename}.srt
