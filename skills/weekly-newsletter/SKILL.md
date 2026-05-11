@@ -24,6 +24,24 @@ Esta skill (`weekly-newsletter`) define el flujo editorial y el contenido; `list
 
 ### 1. Recopilar contenido de todas las fuentes
 
+**Newsletter anterior (contexto obligatorio)**:
+
+Antes de decidir tema, estructura, asunto o intro, leer la newsletter semanal anterior para evitar repetir enfoque, asunto y framing.
+
+Prioridad de fuentes:
+1. Revisar el último bloque `Newsletter semanal` en `~/Documents/aipal/10-areas/contenido/learnings.md`.
+2. Si hay campaña previa en Listmonk, leer su asunto y cuerpo con:
+```bash
+listmonk campaigns list
+listmonk campaigns get <id>
+```
+
+Usar esa lectura para:
+- no repetir un asunto casi igual al de la semana anterior;
+- no reutilizar el mismo framing si el tema se parece;
+- detectar qué contenidos ya salieron y dejarlos fuera salvo que haya una actualización clara;
+- explicar en memoria o notas la diferencia editorial de esta semana frente a la anterior.
+
 **X/Twitter** (bird CLI):
 ```bash
 bird user-tweets antonioleivag -n 50 --json
