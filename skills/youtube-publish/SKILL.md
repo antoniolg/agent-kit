@@ -24,22 +24,23 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
 - **Social Curiosity Rule:** Social copy should create curiosity without revealing the verdict of the video. It may say what was tested and why it matters, but it should not spoil whether the model/tool/framework passed, failed, or won the comparison unless the user explicitly asks for that.
 - **Series Context Rule:** If the video is part of a comparison, recurring series, or follow-up, anchor the social copy in that context (e.g. "after testing Qwen 3.6 and Gemma 4...") instead of repeating generic questions from previous posts.
 - **English Variant:** When the user wants a multilingual YouTube version, always generate an English pack for the same video: translated transcript, dubbed English audio, and English title/description derived from the final approved Spanish title/description.
+- **English Description Chapters:** The English YouTube description must include an English `Chapters:` block with the same timestamps as `## Capítulos (final)`, translated naturally. Do not leave chapters only in the Spanish description.
 - **English Scope:** The English pack is for YouTube multi-language audio/localization only. Do not create English social posts unless the user explicitly asks for them.
-- **English Deliverable:** For YouTube, treat the dubbed audio track as the primary deliverable. If the dubbing pipeline also creates a muxed preview video, keep it as optional verification output, not as the main handoff artifact.
+- **English Deliverable:** For YouTube, treat the dubbed audio track as the only default deliverable. Do not create a full English-dubbed video copy unless the user explicitly asks for a preview video or for an English native X variant.
 - **English X Dependency:** If the user wants the English X variant, that implies the English YouTube dubbing pack must also be produced first.
 - **Thumbnail Generation:** Generate 3 thumbnails using the presenter photo set. Default presenter is `antonio` (`assets/antonio-1.png`, `antonio-2.png`, `antonio-3.png`). If the user indicates the video is from Nino, switch presenter to `nino` (`assets/nino-1.png`, `nino-2.png`, `nino-3.png`). Keep only two non-negotiables: (1) massive bold white text (max 3-4 words), (2) cinematic dark look with cyan/magenta accents. Everything else should adapt to the video's narrative with maximum creative freedom.
 - **Reference Photos (strict):** For each generated thumbnail, always use the 3 presenter images together as references. They are identity anchors (not fixed poses); the model is free to choose the best posture/composition.
 - **Tool Logo Rule:** If the video is about a specific tool, product, framework, platform, model, or company, find its official/current logo or app icon early, copy it into `<workdir>/images/refs/`, and use it as a visual reference for thumbnail generation. If the logo cannot be found quickly, explicitly instruct the image model to include the tool's logo/app icon by name, while avoiding fake or distorted brand marks when accuracy matters.
 - **Manual Image Attachment Gate:** Codex `imagegen` preserves presenter identity and brand marks much better when reference images are manually attached in the chat input. Before any thumbnail generation or edit that must preserve Antonio/Nino identity or a tool logo, open `<workdir>/images/refs/` for the user and explicitly ask them to attach the 3 presenter reference images and any relevant tool/logo reference in the message box. Do not call `imagegen` until the user confirms they have attached those images or explicitly asks to continue without them. Showing local Markdown images in chat is not enough for this gate.
-- **Thumbnail Engine:** Use Codex built-in `imagegen` (`image_gen`) as the image generation/editing engine. Do not use Nano Banana for this flow unless the user explicitly asks for it.
+- **Thumbnail Engine:** Use Codex built-in `imagegen` (`image_gen`) as the generation engine for the 3 Spanish thumbnail drafts. Exception: use the `nano-banana-pro` skill for English thumbnail localization/editing from the selected Spanish thumbnail.
 - **Thumbnail Creativity Rule:** Deliver 1 safer option + 2 exploratory options. Avoid producing near-duplicates. If an unconventional concept communicates better for that specific video, prioritize it.
 - **Thumbnail Edit Rule:** When the user asks to edit an existing thumbnail/image, treat the existing image as the edit target, not as inspiration for a new image. Load/show the exact current image first, ensure presenter references are manually attached when identity matters, then ask `imagegen` for a localized edit with hard invariants: same person, same layout, same headline unless changing text, same crop, same lighting, and no reinterpretation.
-- **English Thumbnail Rule:** If the English YouTube dubbing pack is requested, once the user chooses the final thumbnail you must create an English-edited version of that same thumbnail by editing the selected image so its main headline text is in English instead of Spanish. Keep the composition, styling, and identity intact; only adapt the main headline text.
+- **English Thumbnail Rule:** If the English YouTube dubbing pack is requested, once the user chooses the final thumbnail you must create an English-edited version of that same thumbnail with `nano-banana-pro` (`uv run /Users/antonio/Projects/antoniolg/agent-kit/skills/nano-banana-pro/scripts/generate_image.py --input-image ...`). Edit only the main headline text into English. Keep the composition, styling, and identity intact.
 - **Workflow:** Upload a private draft before generating copy so the video URL can be used in social text.
 - **Newsletter:** Disabled in this flow. Do not generate or schedule newsletter here.
 - **X Strategy:** Do not schedule/publish to X via PostFlow in this flow. X is handled as native video upload outside this step.
 - **X Spanish Asset (always):** Always build the Spanish native X video asset from the Spanish video plus the selected Spanish thumbnail, even when the user says "X no". In this workflow, "X no" means do not publish/schedule X and do not build an English X variant unless explicitly requested.
-- **X Variants:** The default X asset is the Spanish native video with the selected Spanish thumbnail embedded as the first 500ms. If the user requested the English X variant too, also build an English native X video using the English-dubbed video plus the English-edited thumbnail.
+- **X Variants:** The default X asset is the Spanish native video with the selected Spanish thumbnail embedded as the first 500ms. If the user requested the English X variant too, create the minimum derived English video needed for that asset from the Spanish video plus `audio/dubbed.en.m4a`, then build the English native X video with the English-edited thumbnail.
 - **Links:** In social posts, the comment must not be just the link; it must include a brief descriptive text inviting to watch (e.g., "Watch the full technical analysis here: https://...").
 - **Comment Sequence:** For final publish/update, always use this order: set video to `unlisted`, insert promo comment (`Domina la IA...`), then set final status (`private` with `publishAt` if scheduled, otherwise `private`).
 - **Schedule Decision Required:** Never publish without an explicit decision in `Programación (final)`: either a date `YYYY-MM-DD HH:MM` or `private`.
@@ -136,6 +137,7 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
    - Read `<workdir>/transcripts/transcript.es.dub.srt` when present (fallback: `transcripts/transcript.es.cleaned.srt`) and create:
      - `<workdir>/transcripts/transcript.en.srt` translated to natural English while preserving timestamps.
    - Do **not** finalize English title/description yet. Those must be created after the user approves the final Spanish title and description, and they must be saved in `content.md` under `## Title (EN)` and `## Description (EN)`, not as canonical standalone files.
+   - When finalizing `## Description (EN)`, include an English `Chapters:` block using the exact timestamps from `## Capítulos (final)`.
    - Generate dubbed English audio using the `youtube-dubber` project.
    - Default dubbing path:
      - `scripts/dub_voxtral.py`
@@ -144,9 +146,8 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
    - Fallback path:
      - Chatterbox / Qwen only if Voxtral is unavailable or clearly worse for a specific run
    - Save at least:
-     - `<workdir>/audio/dubbed.en.wav`
      - `<workdir>/audio/dubbed.en.m4a` as the upload-friendly audio-only export for YouTube Studio
-     - `<workdir>/video/dubbed.en.mp4` if the dubbing pipeline also muxes the video
+     - Do not create `<workdir>/video/dubbed.en.mp4` by default. Only create a muxed English preview video if explicitly requested.
    - After dubbing, always export an audio-only upload artifact for YouTube Studio from the final dubbed track. Prefer `.m4a`/AAC unless the user asked for another format.
    - The goal is to run Voxtral through the same timed dubbing pipeline as the other models, not a manual narration-only shortcut.
 
@@ -223,7 +224,6 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
      Transcript ES:
      Transcript EN:
      Audio EN:
-     Video EN:
      ```
    - Title quality gate: reject title candidates that break the blacklist, sound like internal documentation, or reveal the conclusion too early.
 
@@ -234,7 +234,7 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
    - Target mix: 1 safe option + 2 exploratory options.
    - Use Codex built-in `imagegen` for each thumbnail. Before generation, confirm the user has manually attached the presenter reference images in the message box. You may also load/show the three presenter reference images in chat for visual confirmation, but that does not replace manual attachment.
    - `imagegen` saves under `~/.codex/generated_images/...` by default. After each generation, copy the selected output into `<workdir>/images/drafts/thumb-N.png`; leave the original generated file in place.
-   - Do not use Nano Banana helper scripts in this flow unless the user explicitly asks to switch engines.
+   - Do not use Nano Banana helper scripts for Spanish draft generation unless the user explicitly asks to switch engines; English thumbnail localization is the exception and must use `nano-banana-pro`.
    - After generation, visually inspect each thumbnail and reject near-duplicates, unreadable text, wrong identity, or designs that reveal too much of the video's verdict.
 
 7b. **Edit selected thumbnail when requested**
@@ -242,6 +242,15 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
    - Prompt `imagegen` as an edit, with hard invariants: same person, same layout, same crop, same lighting, same main text unless that text is the requested edit, and no reinterpretation.
    - Save edited draft outputs under `<workdir>/images/drafts/` and visually inspect them against the original.
    - If the edit changes the presenter's identity or redraws the whole thumbnail, discard it and retry once with stricter invariants.
+
+7c. **Create English thumbnail localization**
+   - When the English YouTube dubbing pack is enabled, localize the accepted Spanish thumbnail with the `nano-banana-pro` skill, not `imagegen`.
+   - Use image-to-image editing with the selected thumbnail as `--input-image` and save the result as `<workdir>/images/final/thumb.en.png`.
+   - Prompt narrowly: change only the main headline text into English; keep the same person identity, crop, composition, logo, lighting, typography style, text placement, and overall design.
+   - Example:
+     ```bash
+     uv run /Users/antonio/Projects/antoniolg/agent-kit/skills/nano-banana-pro/scripts/generate_image.py --prompt 'Edit this YouTube thumbnail. Change ONLY the main headline text from Spanish to English: replace it with exactly "<ENGLISH HEADLINE>". Keep identical: the same person identity and face, pose, crop, composition, logo, dark cinematic background, lighting, typography style, text size, text placement, and overall thumbnail design. Do not add new objects. Do not change the person or reinterpret the scene.' --filename <workdir>/images/final/thumb.en.png --input-image <workdir>/images/final/thumb.es.png --resolution 2K
+     ```
 
 8. **Stop to ask for validation of**:
     - Title (choose one of the 3 generated).
@@ -253,7 +262,8 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
      - `## Title (EN)` in `<workdir>/content.md`
      - `## Description (EN)` in `<workdir>/content.md`
    - Keep the English title/description faithful to the final Spanish packaging and technically accurate, not mechanically translated from an outdated draft.
-   - If the English YouTube dubbing pack is enabled, create the English-edited thumbnail after the user confirms the final thumbnail and before any final X-video build. Save the accepted Spanish thumbnail as `<workdir>/images/final/thumb.es.png` and the English thumbnail as `<workdir>/images/final/thumb.en.png`.
+   - Ensure `## Description (EN)` includes translated chapters with the same timestamps as `## Capítulos (final)`.
+   - If the English YouTube dubbing pack is enabled, create the English-edited thumbnail with `nano-banana-pro` after the user confirms the final thumbnail and before any final X-video build. Save the accepted Spanish thumbnail as `<workdir>/images/final/thumb.es.png` and the English thumbnail as `<workdir>/images/final/thumb.en.png`.
 
 9. **Update YouTube**
    - Before updating, check final thumbnail size. If it is larger than 2 MB, create a compressed 1280x720 JPG sibling and upload that file instead of the source PNG:
@@ -280,9 +290,9 @@ Rule: the English X variant depends on the English YouTube dubbing pack. It is v
      ```
    - Result: a version ready for X where the first 500ms shows the selected thumbnail as a static cover frame.
    - Always build the Spanish X variant from the original Spanish video + final Spanish thumbnail.
-   - If the user requested the English X variant too, also build:
+   - If the user requested the English X variant too, first create the minimum temporary muxed English source needed for X from the Spanish video and `<workdir>/audio/dubbed.en.m4a`, then build:
      ```bash
-     python scripts/build_x_native_video.py --video <workdir>/video/dubbed.en.mp4 --thumbnail <workdir>/images/final/thumb.en.png --output <workdir>/video/video-x.en.mp4 --intro-ms 500
+     python scripts/build_x_native_video.py --video <workdir>/tmp/dubbed.en.for-x.mp4 --thumbnail <workdir>/images/final/thumb.en.png --output <workdir>/video/video-x.en.mp4 --intro-ms 500
      ```
    - The English X variant must use the English-edited thumbnail, not the Spanish one.
 
