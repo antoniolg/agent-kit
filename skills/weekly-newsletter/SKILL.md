@@ -96,6 +96,20 @@ El usuario revisa y ajusta antes de generar el borrador.
 
 Antes de ejecutar comandos de Listmonk, consultar [listmonk-cli](../listmonk-cli/SKILL.md) si hay dudas de flags, formatos o troubleshooting.
 
+**Preflight obligatorio de idempotencia**:
+
+Antes de recopilar fuentes o crear una campaña, calcular la fecha objetivo de envío. Si no hay otra indicada, usar el próximo sábado a las 10:30 Europe/Madrid.
+
+Comprobar si ya existe una newsletter para esa fecha:
+
+```bash
+python3 /Users/antonio/Projects/antoniolg/agent-kit/skills/weekly-newsletter/scripts/check_existing_newsletter.py \
+  --target-date YYYY-MM-DD \
+  --json
+```
+
+Si `exists` es `true`, no crear otra campaña ni seguir redactando. Informar a Antonio con el id/link de la campaña existente y parar. Esto evita duplicados cuando la newsletter se prepara manualmente antes de que se lance la automatización semanal.
+
 Escribir el contenido en un archivo temporal:
 ```
 /tmp/newsletter-YYYY-MM-DD.md
