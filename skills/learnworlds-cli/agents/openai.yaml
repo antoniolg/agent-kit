@@ -1,0 +1,4 @@
+interface:
+  display_name: "LearnWorlds CLI"
+  short_description: "Inspect academy enrollments"
+  default_prompt: "Check a student in LearnWorlds and tell me which courses or AI Expert edition they have access to."
