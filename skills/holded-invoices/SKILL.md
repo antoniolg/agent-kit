@@ -1,18 +1,20 @@
 ---
 name: holded-invoices
-description: "Process invoice emails: download PDF attachments, extract vendor + date, generate normalized filename, and send to Holded inbox via n8n webhook."
+description: "Process invoice PDFs/emails: extract vendor + date, generate normalized filename, optionally archive to Drive, and email the PDF to the right Holded inbox."
 ---
 
-# Holded invoices (Gmail → PDF → n8n webhook → Holded inbox)
+# Holded invoices (PDF/Gmail → Drive archive → Holded inbox email)
 
-Goal: when an email contains an invoice PDF, upload it to Holded via an n8n webhook.
+Goal: send invoice/receipt PDFs to Holded's inbox email after normalizing their filenames. Prefer direct Gmail delivery via `gog`; the old n8n webhook is legacy fallback only.
 
 ## Destinations
 
 Configure defaults in `~/.config/skills/config.json` under `holded_invoices`:
 - `company_email`
 - `freelancer_email`
-- `webhook`
+- `sender_email`
+- `drive_inbox_folder_id` (optional, archives a copy before sending)
+- `webhook` (legacy fallback)
 
 Example:
 ```json
@@ -20,15 +22,11 @@ Example:
   "holded_invoices": {
     "company_email": "empresa@holdedbox.com",
     "freelancer_email": "autonomo@holdedbox.com",
-    "webhook": "https://n8n.example.com/webhook/..."
+    "sender_email": "sender@example.com",
+    "drive_inbox_folder_id": "drive-folder-id"
   }
 }
 ```
-
-Webhook fields:
-- `email` (Holded inbox) (HTTP header)
-- `nombre` (base filename, without extension) (HTTP header)
-- Body: raw PDF (`Content-Type: application/pdf`)
 
 Filename convention:
 - `<company>-<YYYY>-<MM>.pdf`
@@ -41,17 +39,26 @@ Filename convention:
 - `scripts/invoice-extract.js --pdf /path/to/invoice.pdf`
   - Outputs JSON: `{ vendor, vendorSlug, year, month }`
 
-### 2) Upload a PDF to Holded via n8n
+### 2) Send a PDF to Holded via Gmail
+
+- `scripts/holded-send.sh --pdf /path/to/invoice.pdf --email <holdedbox> --nombre google-2026-01.pdf`
+  - Uses `gog gmail send` with the configured `sender_email` or `--from`.
+  - If `drive_inbox_folder_id` or `--drive-folder` is set, first uploads the normalized PDF to that Drive folder.
+  - Use `--dry-run` before changing the workflow or debugging auth.
+
+### Legacy fallback: upload via n8n
 
 - `scripts/holded-upload.sh --pdf /path/to/invoice.pdf --email <holdedbox> --nombre google-2026-01.pdf`
-  - If not configured, pass `--webhook` explicitly.
+  - Uses the `webhook` config or `--webhook`.
+  - Use only when direct Gmail delivery is not available.
 
 ### 3) End-to-end: from a Gmail message ID
 
 Downloads the first PDF attachment, suggests a filename, and (optionally) uploads.
 
 - `scripts/holded-from-gmail.sh --account <gmail-account> --message-id <id> --type empresa|autonomo`
-  - If not configured, pass `--email-empresa`, `--email-autonomo`, and/or `--webhook`.
+  - If not configured, pass `--email-empresa`, `--email-autonomo`, `--from`, and/or `--drive-folder`.
+  - Passing `--webhook` forces the legacy n8n path.
 
 Flags:
 - `--yes` skip confirmation and upload
@@ -63,6 +70,6 @@ When reviewing an email thread with a PDF invoice:
 2) Download the PDF attachment.
 3) Run `invoice-extract.js` to infer vendor + year/month.
 4) Propose filename and ask for confirmation.
-5) Call webhook via `holded-upload.sh`.
+5) Send via `holded-send.sh` so Drive/Gmail return observable output.
 
 If extraction fails, ask for vendor + date and continue.

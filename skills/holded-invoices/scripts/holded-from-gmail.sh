@@ -8,12 +8,15 @@ usage() {
 Process an invoice email (Gmail) and upload the first PDF attachment to Holded.
 
 Usage:
-  holded-from-gmail.sh --account <gmail-account> --message-id <id> --type empresa|autonomo [--yes]
+  holded-from-gmail.sh --account <gmail-account> --message-id <id> --type empresa|autonomo [--yes] [options]
 
 Notes:
 - Downloads the first PDF attachment found in the message.
 - Extracts vendor + year/month (best effort) to suggest filename.
 - If --yes is not set, prints the suggested filename and exits.
+- By default, --yes sends the PDF to Holded via gog/Gmail.
+- Pass --from and --drive-folder to override configured sender/Drive archive.
+- Pass --webhook to force the legacy n8n upload path.
 EOF
 }
 
@@ -24,6 +27,8 @@ YES="false"
 WEBHOOK=""
 EMAIL_EMPRESA=""
 EMAIL_AUTONOMO=""
+FROM=""
+DRIVE_FOLDER=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -33,6 +38,8 @@ while [[ $# -gt 0 ]]; do
     --email-empresa) EMAIL_EMPRESA="$2"; shift 2;;
     --email-autonomo) EMAIL_AUTONOMO="$2"; shift 2;;
     --webhook) WEBHOOK="$2"; shift 2;;
+    --from) FROM="$2"; shift 2;;
+    --drive-folder) DRIVE_FOLDER="$2"; shift 2;;
     --yes) YES="true"; shift 1;;
     -h|--help) usage; exit 0;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2;;
@@ -156,7 +163,18 @@ if [[ "$YES" != "true" ]]; then
   exit 0
 fi
 
-"$SCRIPT_DIR/holded-upload.sh" --pdf "$OUT_PDF" --email "$DEST_EMAIL" --nombre "$FILENAME" ${WEBHOOK:+--webhook "$WEBHOOK"}
+if [[ -n "$WEBHOOK" ]]; then
+  "$SCRIPT_DIR/holded-upload.sh" --pdf "$OUT_PDF" --email "$DEST_EMAIL" --nombre "$FILENAME" --webhook "$WEBHOOK"
+else
+  SEND_ARGS=("$SCRIPT_DIR/holded-send.sh" --pdf "$OUT_PDF" --email "$DEST_EMAIL" --nombre "$FILENAME")
+  if [[ -n "$FROM" ]]; then
+    SEND_ARGS+=(--from "$FROM")
+  fi
+  if [[ -n "$DRIVE_FOLDER" ]]; then
+    SEND_ARGS+=(--drive-folder "$DRIVE_FOLDER")
+  fi
+  "${SEND_ARGS[@]}"
+fi
 
 # Archive thread after successful upload
 THREAD_ID=$(printf "%s" "$MSG_JSON" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.stdout.write(j.message?.threadId||j.threadId||'');});")

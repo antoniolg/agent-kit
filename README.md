@@ -17,7 +17,7 @@ A curated catalog of Agent Skills plus supporting docs, scripts, and assets.
 - **email** — Manage inbox email. Uses the inbox script and stores metadata (ids) to open or archive messages later.
 - **google-chat** — Read Google Chat spaces/threads via the Chat API, create/refresh OAuth tokens, parse Gmail Chat URLs, and list spaces.
 - **grok-research** — Investiga temas de actualidad con Grok 4.1 vía OpenRouter y genera un informe en Markdown con timeline, claims verificables y fuentes.
-- **holded-invoices** — Process invoice emails: download PDF attachments, extract vendor + date, generate normalized filename, and send to Holded inbox via n8n webhook.
+- **holded-invoices** — Process invoice emails/PDFs: extract vendor + date, generate normalized filename, optionally archive to Drive, and email to the right Holded inbox.
 - **justdoit** — Manage tasks via the justdoit CLI (Google Tasks + Calendar): next view, list, search, complete/undo, and common workflows.
 - **morning-routine** — Orchestrates a full morning sweep of pending items (email, tasks, Slack, WhatsApp, X).
 - **short-publish** — End-to-end workflow for turning a local video into transcripts, burned subtitles, and scheduled multi-network posts via PostFlow CLI.
